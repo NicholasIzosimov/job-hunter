@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job Hunter</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236246ea'/><path d='M9 21V11m5 10V8m5 13v-7m5 7v-4' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="top-row wrap">
+        <div class="brand">
+          <h1>Job Hunter</h1>
+          <span id="stats" class="stats"></span>
+        </div>
+        <div class="top-actions">
+          <button id="addBtn" class="btn ghost" type="button">+ Add job</button>
+          <button id="profileBtn" class="btn ghost" type="button">Profile &amp; autofill</button>
+          <button id="snippetsBtn" class="btn ghost" type="button">Snippets</button>
+          <a class="btn ghost" href="/api/export.csv">Export CSV</a>
+          <button id="refreshBtn" class="btn primary" type="button">Refresh jobs</button>
+        </div>
+      </div>
+      <div id="progress" class="progress wrap" hidden>
+        <div class="bar"><span></span></div>
+        <span class="label"></span>
+      </div>
+      <nav id="tabs" class="tabs wrap" aria-label="Status"></nav>
+      <div class="filters wrap">
+        <input id="search" type="search" placeholder="Search title, company, location…   ( / )" autocomplete="off" />
+        <div id="chips" class="chips" role="group" aria-label="Categories"></div>
+        <div class="selects">
+          <select id="where" aria-label="Where">
+            <option value="reachable">Home + remote</option>
+            <option value="country">Home + country + remote</option>
+            <option value="home">Home only</option>
+            <option value="remote">Remote only</option>
+            <option value="any">Anywhere</option>
+          </select>
+          <select id="level" aria-label="Level">
+            <option value="realistic">Realistic for me</option>
+            <option value="entry">Entry / junior only</option>
+            <option value="no-senior">Hide senior+</option>
+            <option value="any">Any level</option>
+          </select>
+          <select id="age" aria-label="Posted">
+            <option value="0">Any time</option>
+            <option value="3">Last 3 days</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+          <select id="company" aria-label="Company"></select>
+          <select id="sort" aria-label="Sort">
+            <option value="score">Best match</option>
+            <option value="newest">Newest</option>
+            <option value="company">Company A–Z</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <p id="summary" class="summary"></p>
+      <ul id="list" class="list"></ul>
+      <div id="empty" class="empty" hidden></div>
+      <button id="more" class="btn ghost more" type="button" hidden></button>
+    </main>
+
+    <footer class="keys wrap">
+      <kbd>j</kbd>/<kbd>k</kbd> move · <kbd>Enter</kbd> apply · <kbd>a</kbd> mark applied · <kbd>c</kbd> copy cover letter ·
+      <kbd>s</kbd> save · <kbd>x</kbd> hide · <kbd>e</kbd> details · <kbd>u</kbd> undo · <kbd>/</kbd> search
+    </footer>
+
+    <aside id="drawer" class="drawer" hidden aria-label="Snippets">
+      <div class="drawer-head">
+        <h2>Snippets</h2>
+        <button id="closeDrawer" class="btn ghost icon" type="button" aria-label="Close">✕</button>
+      </div>
+      <p class="hint">
+        Reusable text for applications. <code>{{company}}</code>, <code>{{title}}</code>, <code>{{location}}</code>
+        and <code>{{date}}</code> come from the job; <code>{{name}}</code>, <code>{{phone}}</code>,
+        <code>{{email}}</code>, <code>{{linkedin}}</code> and <code>{{portfolio}}</code> from your Profile.
+        Which letter goes with which kind of job is set in <b>Profile &amp; autofill</b>; the <b>default</b>
+        snippet is the fallback.
+      </p>
+      <div id="snippetList"></div>
+      <button id="addSnippet" class="btn ghost" type="button">+ Add snippet</button>
+    </aside>
+
+    <aside id="profileDrawer" class="drawer" hidden aria-label="Profile and autofill">
+      <div class="drawer-head">
+        <h2>Profile &amp; autofill</h2>
+        <button id="closeProfile" class="btn ghost icon" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <section class="setup">
+        <h3>The Fill button</h3>
+        <ol class="hint">
+          <li>Show your bookmarks bar: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>.</li>
+          <li>Drag this button onto it: <a id="bookmarklet" class="bookmarklet" href="#">⚡ Fill application</a></li>
+          <li>Click <b>Apply</b> on a job here, then click <b>⚡ Fill application</b> on the job's form.</li>
+        </ol>
+        <p class="hint">
+          It fills empty fields with the details below, pastes the right cover letter and attaches the right CV,
+          then shows what it did. It never submits: you check and press Submit.
+          After changing anything below, drag the button again (the old one keeps the old details).
+        </p>
+        <p class="hint">
+          Chrome may ask once per job site to "access devices on your local network": allow it so the
+          button can fetch your CV and letter. Greenhouse and Ashby sites block this anyway; there the
+          button fills the text fields, the letter is already on your clipboard (<kbd>Ctrl</kbd>+<kbd>V</kbd>),
+          and you attach the CV yourself.
+        </p>
+      </section>
+
+      <form id="profileForm" class="profile-form" autocomplete="off">
+        <h3>You</h3>
+        <div class="grid2">
+          <label>First name <input name="firstName" /></label>
+          <label>Last name <input name="lastName" /></label>
+          <label>Email <input name="email" type="email" /></label>
+          <label>Phone <input name="phone" type="tel" /></label>
+          <label>City <input name="city" /></label>
+          <label>LinkedIn URL <input name="linkedin" type="url" /></label>
+          <label>Portfolio / website <input name="portfolio" type="url" /></label>
+          <label>GitHub URL <input name="github" type="url" /></label>
+          <label>Music link (Spotify / SoundCloud) <input name="musicLink" type="url" /></label>
+        </div>
+
+        <h3>Common questions</h3>
+        <p class="hint">Only filled in where a form asks. Leave blank to answer case by case.</p>
+        <div class="grid2">
+          <label>Salary expectation <input name="salary" placeholder="e.g. 32 000 SEK/month" /></label>
+          <label>Availability / notice <input name="availability" placeholder="e.g. Immediately" /></label>
+          <label>Work authorisation <input name="workAuth" placeholder="e.g. Swedish citizen, no sponsorship needed" /></label>
+          <label>How did you hear about us <input name="howHeard" placeholder="e.g. Company careers page" /></label>
+        </div>
+
+        <h3>Which CV and letter go with which job</h3>
+        <p class="hint" id="cvHint"></p>
+        <div class="grid2">
+          <label>CV for music jobs <select name="cvMusic"></select></label>
+          <label>CV for tech &amp; games jobs <select name="cvTech"></select></label>
+          <label>Letter for music jobs <select name="letterMusic"></select></label>
+          <label>Letter for tech &amp; games jobs <select name="letterTech"></select></label>
+        </div>
+        <p class="hint">Games jobs, and tech jobs outside music, use the tech CV and letter; all others use the music ones.</p>
+      </form>
+    </aside>
+
+    <dialog id="addDialog">
+      <form id="addForm" method="dialog">
+        <h2>Track a job from anywhere</h2>
+        <p class="hint">For roles you find on LinkedIn, Indeed, company sites, etc.</p>
+        <label>Job title <input name="title" required maxlength="300" /></label>
+        <label>Company <input name="company" required maxlength="200" /></label>
+        <label>Link <input name="url" type="url" placeholder="https://…" /></label>
+        <label>Location <input name="location" maxlength="300" /></label>
+        <label>Status
+          <select name="status">
+            <option value="saved">Saved (apply later)</option>
+            <option value="applied">Already applied</option>
+          </select>
+        </label>
+        <label>Notes <textarea name="notes" rows="3"></textarea></label>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" value="cancel" id="cancelAdd">Cancel</button>
+          <button class="btn primary" type="submit" value="ok">Add job</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

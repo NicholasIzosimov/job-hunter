@@ -1,0 +1,14 @@
+{
+  "name": "job-hunter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal job scraper + application tracker for music / games / tech roles",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "scrape": "node src/scrape.js"
+  }
+}
