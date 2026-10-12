@@ -174,18 +174,18 @@ export default {
         textWeight: 2,
         terms: [
           'music*', 'musician*', 'audio*', 'composer*', 'composition', 'songwrit*', 'song*', 'lyric*',
-          'soundtrack*', 'sound design*', 'sound engineer*', 'sound effects', 'speech',
+          'soundtrack*', 'sound design*', 'sound engineer*', 'sound effects',
           'record label*', 'label services', 'a&r', 'artist relations', 'artist development',
           'artist services', 'artist manag*', 'music publish*', 'royalt*', 'sync licens*',
           'neighbouring rights', 'neighboring rights', 'mixing', 'mastering', 'daw', 'synth', 'synths', 'synthesizer*',
           'midi', 'foley', 'wwise', 'fmod', 'acoustic*', 'podcast*', 'playlist*', 'concert*',
-          'live music', 'festival*', 'touring', 'orchestra', 'orchestral', 'radio', 'ableton', 'pro tools',
+          'live music', 'festival*', 'touring', 'orchestra', 'orchestral', 'ableton', 'pro tools',
           'logic pro', 'spatial audio', 'dolby atmos',
           // Swedish
           '*musik*', '*ljud*', 'låtskriv*', 'kompositör*', 'skivbolag*', 'podd*', 'ljudbok*',
         ],
         titleTerms: [
-          'sound*', 'voice', 'vocal*', 'band', 'dsp', 'label', 'copyright*', 'rights', 'metadata', 'catalogue*',
+          'sound*', 'voice', 'vocal*', 'band', 'dsp', 'radio', 'speech', 'label', 'copyright*', 'rights', 'metadata', 'catalogue*',
           'catalog manager', 'catalog coordinator', 'catalog specialist', 'catalog operations', 'music catalog*',
           'music licens*', 'upphovsrätt*', 'rättighet*',
         ],

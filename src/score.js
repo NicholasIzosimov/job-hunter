@@ -148,7 +148,9 @@ export function scoreJob(job, rules) {
 
   for (const tag of tags) score += rules.companyTagBonus?.[tag] ?? 0;
 
-  const cats = new Set(Object.keys(matched));
+  // A category tag needs a title match or at least two different description words:
+  // one stray word ("radio" in a telecom ad) still scores a little, but doesn't tag the job.
+  const cats = new Set(Object.keys(matched).filter((k) => inTitle[k] || matched[k].length >= 2));
   if (tags.some((t) => MUSIC_TAGS.includes(t))) cats.add('music');
   if (tags.includes('games')) cats.add('games');
   if (tags.includes('ai')) cats.add('ai');
