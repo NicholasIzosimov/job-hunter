@@ -64,6 +64,10 @@ After changing your profile, drag the button to the bookmarks bar again.
 
 ## Scores and tags
 
+Scores run from 0 to 100, where **100 = your dream job** (`profile.perfectJob` in `config.js`).
+Each job's points are shown as a percentage of the dream job's points, capped at 100.
+Open a job's details (▾) to see the points behind it.
+
 Each job gets points for music/audio, games, tech, AI and creative keywords in English
 and Swedish (more for title matches), a bonus for music/games companies, and a big bonus
 for **✦ Blend** roles that mix music/audio with games, tech or AI. Hover a tag to see which words matched.

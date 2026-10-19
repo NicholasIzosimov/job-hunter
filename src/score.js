@@ -41,7 +41,7 @@ export function compileProfile(profile) {
   }
   const loc = profile.location || {};
   const exp = profile.experience || {};
-  return {
+  const rules = {
     ...profile,
     cats,
     exp,
@@ -58,6 +58,9 @@ export function compileProfile(profile) {
     countryRe: termsRegex(loc.country),
     remoteRegionRe: termsRegex(loc.remoteRegions),
   };
+  // 100 = the raw score of your dream job (profile.perfectJob); everything else scales from it.
+  rules.perfectRaw = profile.perfectJob ? scoreJob(profile.perfectJob, rules).raw : 0;
+  return rules;
 }
 
 // ── How many years of experience does the posting ask for? ──────────────────
@@ -220,8 +223,10 @@ export function scoreJob(job, rules) {
     adjust(Math.min(skills.length * (exp.skillPoints ?? 1), exp.skillMax ?? 4), `uses your skills (${skills.slice(0, 4).join(', ')})`);
   }
 
+  const scaled = rules.perfectRaw > 0 ? Math.max(0, Math.min(100, Math.round((score / rules.perfectRaw) * 100))) : score;
   return {
-    score,
+    score: scaled, // 0–100 when a perfectJob is configured
+    raw: score, // points before scaling; minScore is in these units
     relevance,
     cats: [...cats],
     matched,
@@ -254,5 +259,5 @@ const LEVEL_REASON = {
 
 /** A job is worth listing if it's in your field (relevance) and still scores well overall. */
 export function isRelevant(s, profile) {
-  return !s.excluded && s.relevance >= (profile.minRelevance ?? 0) && s.score >= (profile.minScore ?? 0);
+  return !s.excluded && s.relevance >= (profile.minRelevance ?? 0) && (s.raw ?? s.score) >= (profile.minScore ?? 0);
 }

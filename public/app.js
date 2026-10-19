@@ -292,7 +292,7 @@ function details(j) {
     .join(' · ');
   const breakdown =
     j.relevance != null
-      ? [`${j.relevance} for your field`, ...(j.why || [])].map(esc).join(' · ') + ` = <b>${j.score}</b>`
+      ? [`${j.relevance} for your field`, ...(j.why || [])].map(esc).join(' · ') + ` = ${j.raw ?? j.score} points → <b>${j.score}/100</b>`
       : '';
   const facts = [
     j.department && `Team: ${esc(j.department)}`,
@@ -315,7 +315,7 @@ function card(j) {
   const cls = ['job', j.id === state.selected && 'selected', state.pending.has(j.id) && 'pending', j.closed && 'closed']
     .filter(Boolean)
     .join(' ');
-  const scoreCls = j.score >= 18 ? 'hot' : j.score >= 11 ? 'good' : '';
+  const scoreCls = j.score >= 70 ? 'hot' : j.score >= 45 ? 'good' : '';
   const meta = [
     `<span class="company">${esc(j.company)}</span>`,
     j.location && `<span class="loc" title="${esc(j.location)}">${esc(j.location)}</span>`,
@@ -325,7 +325,7 @@ function card(j) {
   ].filter(Boolean);
   const tracked = TRACKED.includes(j.status) && j.appliedAt ? `<div class="tracked">Applied ${ago(j.appliedAt)}</div>` : '';
   return `<li class="${cls}" data-id="${esc(j.id)}">
-    <div class="score ${scoreCls}" title="Match score">${j.score}</div>
+    <div class="score ${scoreCls}" title="Match score (100 = your dream job)">${j.score}</div>
     <div>
       <div class="head"><a class="title" href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a>${pills(j)}</div>
       <div class="meta">${meta.join(' · ')}</div>

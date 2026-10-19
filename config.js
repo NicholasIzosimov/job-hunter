@@ -486,7 +486,18 @@ export default {
     // (before location / level / experience adjustments). Stops "Junior Sales, Stockholm" showing up.
     minRelevance: 4,
 
-    // Jobs scoring below this overall are never added to your list.
+    // Your dream job. Its score becomes 100 and every other job is shown as a percentage of it
+    // (capped at 100). Change it and the whole list re-scales on the next refresh.
+    perfectJob: {
+      title: 'Junior Sound Designer',
+      description: 'Music and audio for games. 0-2 years of experience. Pro Tools, Ableton, Godot.',
+      location: 'Stockholm, Sweden',
+      companyTags: ['music', 'games'],
+      source: 'teamtailor',
+      kind: 'ats',
+    },
+
+    // Jobs scoring below this overall are never added to your list (raw points, before the 0–100 scaling).
     minScore: 5,
 
     // Titles containing any of these are dropped completely.
