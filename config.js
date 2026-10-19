@@ -73,6 +73,7 @@ export default {
     { name: 'TransPerfect', ats: 'smartrecruiters', slug: 'transperfect', tags: [] },
     { name: 'Keywords Studios', ats: 'smartrecruiters', slug: 'keywordsstudios', tags: ['games'] },
     { name: 'Testronic', ats: 'workable', slug: 'testronic', tags: ['games'] },
+    { name: 'Studiefrämjandet', ats: 'teamtailor', slug: 'studieframjandet', tags: [] }, // music & rehearsal-studio activities
     // Not followed (no usable job feed): Hazelight, MachineGames, Toca Boca. Check their sites now and then.
 
     // ── Music & audio
@@ -148,6 +149,9 @@ export default {
       'svensktalande', 'administratör', 'koordinator', 'moderator',
       'undertextare', 'dubbning', 'AV-tekniker', 'mediatekniker', 'studiotekniker', 'ljudbok', 'radioproducent',
       'eventkoordinator', 'projektkoordinator', 'customer success', 'testare',
+      'scenarbetare', 'scentekniker', 'backline', 'festival', 'ljus och ljud', 'esport', 'streaming', 'PC-byggare',
+      'datortekniker', 'ljudarkiv', 'digitalisering ljud', 'innehållsproducent', 'videoproducent',
+      'content creator', 'musikinstrument', 'musikbutik', 'studioansvarig', 'replokal', 'kursledare musik',
     ],
   },
 
@@ -183,6 +187,10 @@ export default {
     'subtitler',
     'transcription',
     'customer success',
+    'esports',
+    'stream producer',
+    'content creator',
+    'video editor',
   ],
 
   // ── What counts as a good match ───────────────────────────────────────────
@@ -295,6 +303,24 @@ export default {
           'project coordinator', 'projektkoordinator', 'production coordinator', 'customer success', 'onboarding specialist',
           'test analyst', 'testare', 'ai trainer', 'annotat*', 'rater', 'evaluator', 'conversation specialist',
           'junior data analyst', 'reporting analyst',
+          // 1 live events & venue crew
+          'scenarbetare', 'stagehand', 'stage hand', 'backline*', 'venue technician', 'rigger', 'riggare', 'roadie',
+          'event crew', 'eventpersonal', 'turnétekniker', 'production runner', 'box office',
+          // 2 esports & stream production
+          'observer', 'stream producer', 'broadcast producer', 'replay operator', 'livestream*', 'streaming technician',
+          // 3 PC building & hardware
+          'pc-byggare', 'pc builder', 'pc technician', 'datortekniker', 'hardware technician',
+          // 4 audio archives & digitisation
+          'ljudarkiv*', 'mediaarkiv*', 'audio archiv*', 'media archiv*', 'sound archiv*', 'digitaliseringstekniker',
+          // 5 content production
+          'content producer', 'content creator', 'innehållsproducent', 'video producer', 'videoproducent',
+          'social media', 'sociala medier',
+          // 6 music-gear retail
+          'musikbutik*', 'music store', 'instrumentbutik*', 'product specialist', 'produktspecialist',
+          // 7 studio management
+          'studio manager', 'studioansvarig', 'studiochef', 'replokal*', 'rehearsal',
+          // 8 courses
+          'course assistant', 'kursassistent', 'kursledare', 'workshop leader', 'workshopledare',
         ],
       },
       creative: {
@@ -416,7 +442,8 @@ export default {
             'audio editor', 'sound technician', 'audio technician', 'ljudtekni*', 'podcast producer', 'podcast editor',
             'mixing engineer', 'mastering engineer', 'recording engineer', 'live sound', 'eventtekni*', 'scentekni*',
             'dubb*', 'adr', 'voice over', 'voiceover', 'studiotekniker', 'av technician', 'av-tekniker', 'mediatekniker',
-            'audiobook*', 'radio producer', 'radioproducent',
+            'audiobook*', 'radio producer', 'radioproducent', 'backline*', 'venue technician', 'scenarbetare',
+            'stagehand', 'studio manager', 'studioansvarig', 'studiochef',
           ],
         },
         {
@@ -440,6 +467,37 @@ export default {
             'language tester', 'lqa', 'swedish speaking', 'svensktalande', 'subtit*', 'undertext*', 'transcri*', 'transkri*',
             'conversation specialist', 'ai trainer', 'annotat*',
           ],
+        },
+        {
+          label: 'esports / stream production (gaming + production)',
+          points: 3,
+          terms: ['observer', 'stream producer', 'broadcast producer', 'replay operator', 'livestream*', 'streaming technician', 'esports'],
+        },
+        {
+          label: 'hands-on PC hardware work',
+          points: 3,
+          terms: ['pc-byggare', 'pc builder', 'pc technician', 'datortekniker', 'hardware technician'],
+        },
+        {
+          label: 'audio archive / cataloguing work (audio + metadata)',
+          points: 3,
+          requires: ['ljud*', 'audio', 'media*', 'musik*', 'music', 'film', 'radio', 'svt', 'sr'],
+          terms: ['digitaliser*', 'digitization', 'digitisation', 'arkiv*', 'archiv*', 'katalogiser*', 'cataloguer'],
+        },
+        {
+          label: 'content production',
+          points: 2,
+          terms: ['content producer', 'content creator', 'innehållsproducent', 'video producer', 'videoproducent'],
+        },
+        {
+          label: 'music-gear retail (your gear knowledge)',
+          points: 3,
+          terms: ['musikbutik*', 'music store', 'instrumentbutik*'],
+        },
+        {
+          label: 'teaching-adjacent course role',
+          points: 1,
+          terms: ['course assistant', 'kursassistent', 'kursledare', 'workshop leader', 'workshopledare'],
         },
         {
           label: 'coordination role (fits your project-leading experience)',
