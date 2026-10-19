@@ -314,7 +314,8 @@ function details(j) {
 // Warcraft Logs parse colours for the match score.
 const RARITIES = [
   { min: 100, key: 'gold', name: 'Perfect parse' },
-  { min: 95, key: 'pink', name: 'Pink parse' },
+  { min: 99, key: 'pink', name: 'Pink parse' },
+  { min: 95, key: 'orange', name: 'Orange parse' },
   { min: 75, key: 'purple', name: 'Purple parse' },
   { min: 50, key: 'blue', name: 'Blue parse' },
   { min: 25, key: 'green', name: 'Green parse' },

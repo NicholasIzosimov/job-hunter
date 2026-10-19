@@ -66,6 +66,13 @@ export default {
     { name: 'Acast', ats: 'teamtailor', url: 'https://careers.acast.com', tags: ['audio'] },
     { name: 'Lovable', ats: 'ashby', slug: 'lovable', tags: ['ai'] },
     // (Spotify and Epidemic Sound, below, are both headquartered in Stockholm.)
+
+    // ── Language, localisation & subtitling (Swedish-language roles, often remote)
+    { name: 'Plint', ats: 'teamtailor', slug: 'plint', tags: [] },
+    { name: 'RWS', ats: 'lever', slug: 'rws', tags: [] },
+    { name: 'TransPerfect', ats: 'smartrecruiters', slug: 'transperfect', tags: [] },
+    { name: 'Keywords Studios', ats: 'smartrecruiters', slug: 'keywordsstudios', tags: ['games'] },
+    { name: 'Testronic', ats: 'workable', slug: 'testronic', tags: ['games'] },
     // Not followed (no usable job feed): Hazelight, MachineGames, Toca Boca. Check their sites now and then.
 
     // ── Music & audio
@@ -139,6 +146,8 @@ export default {
       // other fits: hands-on audio, language work, media production, admin, moderation
       'ljudtekniker', 'eventtekniker', 'produktionsassistent', 'redigerare', 'lokalisering', 'översättare', 'språkgranskare',
       'svensktalande', 'administratör', 'koordinator', 'moderator',
+      'undertextare', 'dubbning', 'AV-tekniker', 'mediatekniker', 'studiotekniker', 'ljudbok', 'radioproducent',
+      'eventkoordinator', 'projektkoordinator', 'customer success', 'testare',
     ],
   },
 
@@ -170,6 +179,10 @@ export default {
     'content moderator',
     'audio editor',
     'podcast',
+    'swedish translator',
+    'subtitler',
+    'transcription',
+    'customer success',
   ],
 
   // ── What counts as a good match ───────────────────────────────────────────
@@ -276,6 +289,12 @@ export default {
           'svensktalande', 'administrator', 'administratör', 'administrat*', 'office coordinator', 'office assistant',
           'kontorsassistent', 'operations coordinator', 'operations assistant', 'koordinator', 'data entry',
           'registrator', 'content moderator', 'community moderator', 'moderator',
+          'dubb*', 'adr', 'voice over', 'voice-over', 'voiceover', 'subtit*', 'undertext*', 'transcri*', 'transkri*',
+          'audiobook*', 'av technician', 'av-tekniker', 'audiovisual', 'audio visual', 'mediatekniker', 'medietekniker',
+          'studiotekniker', 'radio producer', 'radioproducent', 'event coordinator', 'eventkoordinator',
+          'project coordinator', 'projektkoordinator', 'production coordinator', 'customer success', 'onboarding specialist',
+          'test analyst', 'testare', 'ai trainer', 'annotat*', 'rater', 'evaluator', 'conversation specialist',
+          'junior data analyst', 'reporting analyst',
         ],
       },
       creative: {
@@ -364,6 +383,25 @@ export default {
       skillPoints: 1,
       skillMax: 4,
 
+      // Rules on what the job DESCRIPTION asks for (each counts once).
+      descriptionRules: [
+        {
+          label: 'asks for Swedish (your native language: fewer competing applicants)',
+          points: 2,
+          terms: [
+            'svenska i tal och skrift', 'flytande svenska', 'fluent swedish', 'fluent in swedish', 'native swedish',
+            'swedish native', 'swedish-speaking', 'swedish speaking', 'svensktalande', 'swedish is a must',
+            'swedish is required', 'god svenska',
+          ],
+        },
+        {
+          // Set points to -5 if you DON'T have a driving licence (common in AV/event jobs).
+          label: 'asks for a driving licence',
+          points: 0,
+          terms: ['b-körkort', 'körkort', 'driving licence', 'driving license', "driver's license", "driver's licence"],
+        },
+      ],
+
       // Developer/engineer titles NOT marked junior (and not asking ≤2 years) usually expect
       // professional development experience; audio engineering and QA roles are exempt.
       unmarkedTechBonus: -5,
@@ -377,11 +415,13 @@ export default {
           terms: [
             'audio editor', 'sound technician', 'audio technician', 'ljudtekni*', 'podcast producer', 'podcast editor',
             'mixing engineer', 'mastering engineer', 'recording engineer', 'live sound', 'eventtekni*', 'scentekni*',
+            'dubb*', 'adr', 'voice over', 'voiceover', 'studiotekniker', 'av technician', 'av-tekniker', 'mediatekniker',
+            'audiobook*', 'radio producer', 'radioproducent',
           ],
         },
         {
           label: 'needs a language you do not speak',
-          points: -10,
+          points: -30, // effectively removes the job
           terms: [
             'norwegian', 'danish', 'finnish', 'german', 'french', 'spanish', 'italian', 'portuguese', 'dutch', 'polish',
             'arabic', 'turkish', 'russian', 'ukrainian', 'japanese', 'korean', 'chinese', 'mandarin', 'cantonese',
@@ -394,8 +434,17 @@ export default {
           label: 'Swedish + English language work',
           points: 4,
           // Only when the title is about Swedish/English (or is a Swedish-language title).
-          requires: ['swedish', 'svensk*', 'english', 'engelsk*', 'nordic', 'scandinavia*', 'översättare', 'språkgranskare'],
-          terms: ['localization', 'localisation', 'lokaliser*', 'translator', 'översättare', 'linguist', 'proofreader', 'språkgranskare', 'language tester', 'lqa', 'swedish speaking', 'svensktalande'],
+          requires: ['swedish', 'svensk*', 'english', 'engelsk*', 'nordic', 'scandinavia*', 'översättare', 'språkgranskare', 'undertext*', 'transkri*'],
+          terms: [
+            'localization', 'localisation', 'lokaliser*', 'translator', 'översättare', 'linguist', 'proofreader', 'språkgranskare',
+            'language tester', 'lqa', 'swedish speaking', 'svensktalande', 'subtit*', 'undertext*', 'transcri*', 'transkri*',
+            'conversation specialist', 'ai trainer', 'annotat*',
+          ],
+        },
+        {
+          label: 'coordination role (fits your project-leading experience)',
+          points: 2,
+          terms: ['project coordinator', 'projektkoordinator', 'production coordinator', 'event coordinator', 'eventkoordinator', 'office coordinator', 'koordinator'],
         },
         {
           label: 'music-side role you can do now (curation, catalogue, rights, artist services)',

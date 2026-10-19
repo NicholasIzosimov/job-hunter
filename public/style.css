@@ -225,6 +225,7 @@ textarea { padding: 8px 10px; width: 100%; resize: vertical; }
 .score.r-green { color: #1eff00; }
 .score.r-blue { color: #3b8cff; } /* WCL #0070ff, brightened */
 .score.r-purple { color: #b65cff; } /* WCL #a335ee, brightened */
+.score.r-orange { color: #ff8000; box-shadow: 0 0 10px #ff800055; }
 .score.r-pink { color: #e268a8; box-shadow: 0 0 10px #e268a855; }
 .score.r-gold { color: #e5cc80; box-shadow: 0 0 12px #e5cc8077; }
 

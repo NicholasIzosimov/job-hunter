@@ -53,6 +53,7 @@ export function compileProfile(profile) {
     unrealisticRe: termsRegex(exp.unrealisticTerms),
     pipelineRe: termsRegex(exp.pipelineTerms),
     skillsRe: termsRegex(exp.mySkills),
+    descriptionRules: (exp.descriptionRules || []).map((g) => ({ ...g, re: termsRegex(g.terms) })),
     roleFit: (exp.roleFit || []).map((g) => ({ ...g, re: termsRegex(g.terms), requiresRe: termsRegex(g.requires) })),
     homeRe: termsRegex(loc.home),
     countryRe: termsRegex(loc.country),
@@ -202,6 +203,10 @@ export function scoreJob(job, rules) {
   // Recruiters' and boards' talent pools aren't real openings; a company's own open application is.
   if (job.kind !== 'ats' && has(rules.pipelineRe, title)) {
     adjust(exp.pipelineBonus ?? 0, 'talent pool / open application, not a specific opening');
+  }
+
+  for (const rule of rules.descriptionRules) {
+    if (rule.points && has(rule.re, text)) adjust(rule.points, rule.label);
   }
 
   let goodFit = false;
