@@ -30,7 +30,8 @@ const state = {
   snippets: [],
   details: new Map(), // id → full job (with description), fetched on expand
   expanded: new Set(),
-  pending: new Set(), // jobs whose application page was opened but not yet confirmed
+  pending: new Set(),
+  writing: new Set(), // jobs Claude is writing a letter for right now // jobs whose application page was opened but not yet confirmed
   selected: null,
   limit: PAGE,
   lastUndo: null,
@@ -264,6 +265,12 @@ function statusSelect(j) {
   ).join('')}</select>`;
 }
 
+function writeButton(j) {
+  if (state.writing.has(j.id)) return '<button class="btn ghost" type="button" disabled>✍ Writing…</button>';
+  const label = j.aiLetter ? '✍ Rewrite' : '✍ Write';
+  return `<button class="btn ghost" data-act="write" type="button" title="Have Claude write a letter for this job (w)">${label}</button>`;
+}
+
 function actions(j) {
   if (state.pending.has(j.id)) {
     return `<button class="btn good" data-act="confirm" type="button" title="Mark as applied (a)">✓ I applied</button>
@@ -274,6 +281,7 @@ function actions(j) {
   if (j.status === 'new' || j.status === 'saved') {
     const saved = j.status === 'saved';
     return `<button class="btn primary" data-act="apply" type="button" title="Open application (Enter)">Apply ↗</button>
+      ${writeButton(j)}
       <button class="btn ghost" data-act="copy" type="button" title="Copy cover letter (c)">Copy letter</button>
       <button class="btn ghost icon ${saved ? 'on' : ''}" data-act="save" type="button" title="${saved ? 'Unsave' : 'Save for later'} (s)">${saved ? '★' : '☆'}</button>
       <button class="btn ghost icon" data-act="hide" type="button" title="Not interested (x)">✕</button>${expand}`;
@@ -306,6 +314,7 @@ function details(j) {
     ${matched ? `<div class="matched">Why it matched — ${matched}</div>` : ''}
     ${breakdown ? `<div class="matched">Score — ${breakdown}</div>` : ''}
     <pre class="desc">${esc(desc)}</pre>
+    ${j.aiLetter ? `<label>AI letter for this job (edit freely: Apply and ⚡ Fill use this version)<textarea data-act="ailetter" rows="12">${esc(j.aiLetter)}</textarea></label>` : ''}
     <label>Notes (contacts, salary, follow-up dates…)<textarea data-act="notes" rows="3">${esc(j.notes || '')}</textarea></label>
     ${j.status === 'new' || j.status === 'saved' ? `<label>Status ${statusSelect(j)}</label>` : ''}
   </div>`;
@@ -491,6 +500,44 @@ async function startApply(id) {
   }
 }
 
+/** Ask Claude (via the server) for a letter written for this job, then show and copy it. */
+async function writeAiLetter(id) {
+  const j = state.byId.get(id);
+  if (!j || state.writing.has(id)) return;
+  state.writing.add(id);
+  renderCard(id);
+  toast(`Claude is writing a letter for ${j.company} (about 20–60 seconds)…`);
+  try {
+    const res = await api(`/api/jobs/${encodeURIComponent(id)}/ai-letter`, { method: 'POST', body: {} });
+    j.aiLetter = res.aiLetter;
+    j.aiLetterAt = res.aiLetterAt;
+    state.expanded.add(id);
+    const copied = await writeClipboard(res.aiLetter);
+    toast(`Letter for ${j.company} is ready${copied ? ' and copied' : ''}. Read it through before sending.`);
+  } catch (err) {
+    toast(`Couldn't write the letter: ${err.message}`);
+  } finally {
+    state.writing.delete(id);
+    renderCard(id);
+    select(id, { scroll: false });
+  }
+}
+
+const aiLetterTimers = new Map();
+function saveAiLetter(id, text) {
+  const j = state.byId.get(id);
+  if (j) j.aiLetter = text;
+  clearTimeout(aiLetterTimers.get(id));
+  aiLetterTimers.set(
+    id,
+    setTimeout(() => {
+      api(`/api/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: { aiLetter: text } }).catch((e) =>
+        toast(`Letter not saved: ${e.message}`),
+      );
+    }, 500),
+  );
+}
+
 async function copyLetter(id) {
   const j = state.byId.get(id);
   if (!j) return;
@@ -556,6 +603,8 @@ function runAction(act, id, el) {
     case 'cancel':
       state.pending.delete(id);
       return renderCard(id), select(id, { scroll: false });
+    case 'write':
+      return writeAiLetter(id);
     case 'copy':
       return copyLetter(id);
     case 'save':
@@ -588,6 +637,7 @@ $('#list').addEventListener('change', (e) => {
 $('#list').addEventListener('input', (e) => {
   const li = e.target.closest('.job');
   if (li && e.target.dataset.act === 'notes') saveNotes(li.dataset.id, e.target.value);
+  if (li && e.target.dataset.act === 'ailetter') saveAiLetter(li.dataset.id, e.target.value);
 });
 $('#empty').addEventListener('click', (e) => {
   if (e.target.dataset.act !== 'clear-filters') return;
@@ -691,6 +741,7 @@ document.addEventListener('keydown', (e) => {
     s: () => runAction('save', id),
     x: () => setStatus(id, 'hidden'),
     e: () => toggleExpand(id),
+    w: () => j.status === 'new' || j.status === 'saved' ? writeAiLetter(id) : null,
   };
   const fn = keyActs[e.key] || (j && jobActs[e.key]);
   if (!fn) return;

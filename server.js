@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { ROOT, STATUSES, DEFAULT_PROFILE, loadDb, saveDb } from './src/store.js';
 import { loadConfig, runScrape, rescoreAll } from './src/scrape.js';
 import { compileProfile, scoreJob } from './src/score.js';
+import { writeLetter, readFacts } from './src/letters.js';
 
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const CV_DIR = path.join(ROOT, 'cv');
@@ -60,6 +61,8 @@ if (fs.existsSync(SEED_FILE)) {
   }
 }
 saveDb(db);
+
+readFacts(); // creates data/letter-facts.md with your facts the first time
 
 // ── Scraping (runs in the background; the UI polls /api/status) ─────────────
 const scrape = { running: false, done: 0, total: 0, current: '', error: null };
@@ -121,6 +124,7 @@ function applyUpdate(job, body) {
     }
   }
   if (body.notes !== undefined) job.notes = str(body.notes);
+  if (body.aiLetter !== undefined) job.aiLetter = str(body.aiLetter);
 }
 
 // ── Apply kit: which cover letter + CV go with a job ────────────────────────
@@ -154,6 +158,9 @@ function cvFiles() {
 function applyKit(job) {
   const kind = kindOf(job);
   const p = db.profile;
+  const cvChoice = (kind === 'tech' ? p.cvTech : p.cvMusic) || p.cvMusic || p.cvTech || '';
+  // A letter Claude wrote for this specific job wins over the templates.
+  if (job.aiLetter) return { kind, letterName: 'AI letter', letter: job.aiLetter, cvName: cvChoice };
   const snippet =
     db.snippets.find((s) => s.id === (kind === 'tech' ? p.letterTech : p.letterMusic)) ||
     db.snippets.find((s) => s.default) ||
@@ -226,6 +233,21 @@ async function handle(req, res) {
       saveDb(db);
       return send(res, 200, { profile: db.profile, key: db.applyKey, cvFiles: cvFiles() });
     }
+  }
+
+  // Has Claude write a cover letter for this job (takes ~20-60 s) and saves it on the job.
+  const aiMatch = pathname.match(/^\/api\/jobs\/(.+)\/ai-letter$/);
+  if (aiMatch && method === 'POST') {
+    const job = db.jobs[decodeURIComponent(aiMatch[1])];
+    if (!job) return send(res, 404, { error: 'Job not found' });
+    try {
+      job.aiLetter = await writeLetter(job, db.profile);
+    } catch (err) {
+      return send(res, 502, { error: err.message });
+    }
+    job.aiLetterAt = new Date().toISOString();
+    saveDb(db);
+    return send(res, 200, { aiLetter: job.aiLetter, aiLetterAt: job.aiLetterAt });
   }
 
   // Remembers which job you're applying to (for the bookmarklet) and returns its letter + CV choice.
