@@ -134,6 +134,11 @@ export default {
       'speltestare', 'QA tester',
       // music rights & publishing (STIM, SAMI, publishers and labels usually advertise here)
       'musikförlag', 'upphovsrätt', 'royalty', 'rättigheter musik', 'STIM',
+      // support work (on-site in Stockholm or remote anywhere in Sweden)
+      'kundtjänst', 'kundsupport', 'kundservice', 'IT-support', 'helpdesk', 'servicedesk', 'supporttekniker', 'customer support',
+      // other fits: hands-on audio, language work, media production, admin, moderation
+      'ljudtekniker', 'eventtekniker', 'produktionsassistent', 'redigerare', 'lokalisering', 'översättare', 'språkgranskare',
+      'svensktalande', 'administratör', 'koordinator', 'moderator',
     ],
   },
 
@@ -157,6 +162,14 @@ export default {
     'creative technologist',
     'junior developer',
     'game tester',
+    'customer support',
+    'technical support',
+    'chat support',
+    'swedish',
+    'localization',
+    'content moderator',
+    'audio editor',
+    'podcast',
   ],
 
   // ── What counts as a good match ───────────────────────────────────────────
@@ -231,6 +244,39 @@ export default {
           'artificiell intelligens', 'maskininlärning',
         ],
         titleTerms: [],
+      },
+      support: {
+        label: 'Support',
+        // General IT / customer support (chat, phone, helpdesk): good temporary or remote work.
+        titleWeight: 4,
+        textWeight: 0,
+        terms: [],
+        titleTerms: [
+          'customer support', 'customer service', 'customer care', 'customer success', 'customer experience',
+          'support agent', 'support specialist', 'support representative', 'support engineer', 'support technician',
+          'technical support', 'tech support', 'it support', 'chat support', 'player support', 'helpdesk',
+          'help desk', 'service desk', 'first line', '1st line', '2nd line', 'call center', 'contact center',
+          'kundtjänst*', 'kundsupport*', 'kundservice*', 'kundmottag*', 'supporttekniker', 'it-tekniker',
+          'it-support*', 'servicedesk*', 'helpdesk*', 'första linjen', 'kundrådgivare', 'supportmedarbetare',
+        ],
+      },
+      otherfit: {
+        label: 'Other fits',
+        // Non-tech work your background fits: hands-on audio, Swedish/English language work,
+        // media production support, admin/coordination and moderation.
+        titleWeight: 4,
+        textWeight: 0,
+        terms: [],
+        titleTerms: [
+          'audio editor', 'sound technician', 'audio technician', 'ljudtekni*', 'podcast producer', 'podcast editor',
+          'live sound', 'event technician', 'eventtekni*', 'scentekni*', 'broadcast*', 'sändningstekni*',
+          'production assistant', 'produktionsassistent*', 'studio assistant', 'studio technician', 'video editor',
+          'redigerare', 'klippare', 'localization', 'localisation', 'lokaliser*', 'translator', 'översättare',
+          'linguist', 'proofreader', 'språkgranskare', 'language tester', 'lqa', 'swedish speaking',
+          'svensktalande', 'administrator', 'administratör', 'administrat*', 'office coordinator', 'office assistant',
+          'kontorsassistent', 'operations coordinator', 'operations assistant', 'koordinator', 'data entry',
+          'registrator', 'content moderator', 'community moderator', 'moderator',
+        ],
       },
       creative: {
         label: 'Creative',
@@ -326,6 +372,32 @@ export default {
       // Each group counts once; groups can stack. Mirrors "Where you fit" in the CV doc.
       roleFit: [
         {
+          label: 'hands-on audio work you can do now',
+          points: 4,
+          terms: [
+            'audio editor', 'sound technician', 'audio technician', 'ljudtekni*', 'podcast producer', 'podcast editor',
+            'mixing engineer', 'mastering engineer', 'recording engineer', 'live sound', 'eventtekni*', 'scentekni*',
+          ],
+        },
+        {
+          label: 'needs a language you do not speak',
+          points: -10,
+          terms: [
+            'norwegian', 'danish', 'finnish', 'german', 'french', 'spanish', 'italian', 'portuguese', 'dutch', 'polish',
+            'arabic', 'turkish', 'russian', 'ukrainian', 'japanese', 'korean', 'chinese', 'mandarin', 'cantonese',
+            'hindi', 'urdu', 'bengali', 'persian', 'farsi', 'hebrew', 'greek', 'czech', 'hungarian', 'romanian', 'thai',
+            'vietnamese', 'indonesian', 'tagalog', 'swahili', 'amharic', 'somali', 'wolof', 'malagasy', 'shona',
+            'oromo', 'mongolian', 'norsk*', 'dansk*', 'finsk*', 'tysk*', 'fransk*', 'spansk*', 'italiensk*',
+          ],
+        },
+        {
+          label: 'Swedish + English language work',
+          points: 4,
+          // Only when the title is about Swedish/English (or is a Swedish-language title).
+          requires: ['swedish', 'svensk*', 'english', 'engelsk*', 'nordic', 'scandinavia*', 'översättare', 'språkgranskare'],
+          terms: ['localization', 'localisation', 'lokaliser*', 'translator', 'översättare', 'linguist', 'proofreader', 'språkgranskare', 'language tester', 'lqa', 'swedish speaking', 'svensktalande'],
+        },
+        {
           label: 'music-side role you can do now (curation, catalogue, rights, artist services)',
           points: 6,
           requiresMusic: true, // only at a music/audio company or with music in the title
@@ -361,7 +433,7 @@ export default {
           points: 3,
           terms: [
             'customer support', 'support agent', 'support specialist', 'customer success', 'player support',
-            'community support', 'kundtjänst', 'kundsupport', 'support',
+            'community support', 'kundtjänst*', 'kundsupport*', 'kundservice*', 'helpdesk*', 'servicedesk*', 'support',
           ],
         },
         {
@@ -390,7 +462,7 @@ export default {
           terms: [
             'tax', 'accountant*', 'accounting', 'finance', 'financial', 'controller', 'fp&a', 'treasury',
             'legal', 'counsel', 'lawyer', 'compliance', 'recruit*', 'talent acquisition', 'people partner', 'hr',
-            'payroll', 'procurement', 'sales', 'account executive', 'business development', 'partnerships',
+            'payroll', 'procurement', 'sales', 'sälj*', 'försäljning*', 'account executive', 'business development', 'partnerships',
             'product developer', // in retail (H&M etc.) this is garment development, not software
             'investor relations', 'facilities',
           ],
@@ -420,6 +492,7 @@ export default {
     // Titles containing any of these are dropped completely.
     // Teaching roles are excluded because Platsbanken is full of music-teacher ads;
     // delete those entries if you'd consider teaching.
-    excludeTitle: ['*lärare', 'lärarvikarie*', 'teacher*', 'förskol*', 'fritidshem*', 'barnskötare', 'rektor', 'elevassistent*'],
+    // Sales jobs that are often low-integrity (cold calling, door to door, commission only).
+    excludeTitle: ['telemarket*', 'telefonförsälj*', 'dörrförsälj*', 'door to door', 'commission only', 'provisionsbaserad*', '*lärare', 'lärarvikarie*', 'teacher*', 'förskol*', 'fritidshem*', 'barnskötare', 'rektor', 'elevassistent*'],
   },
 };

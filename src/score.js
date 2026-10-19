@@ -53,7 +53,7 @@ export function compileProfile(profile) {
     unrealisticRe: termsRegex(exp.unrealisticTerms),
     pipelineRe: termsRegex(exp.pipelineTerms),
     skillsRe: termsRegex(exp.mySkills),
-    roleFit: (exp.roleFit || []).map((g) => ({ ...g, re: termsRegex(g.terms) })),
+    roleFit: (exp.roleFit || []).map((g) => ({ ...g, re: termsRegex(g.terms), requiresRe: termsRegex(g.requires) })),
     homeRe: termsRegex(loc.home),
     countryRe: termsRegex(loc.country),
     remoteRegionRe: termsRegex(loc.remoteRegions),
@@ -204,6 +204,7 @@ export function scoreJob(job, rules) {
   let goodFit = false;
   for (const group of rules.roleFit) {
     if (!has(group.re, title) || (group.requiresMusic && !musicSide)) continue;
+    if (group.requiresRe && !has(group.requiresRe, title)) continue;
     adjust(group.points, group.label);
     if (group.points > 0) goodFit = true;
   }

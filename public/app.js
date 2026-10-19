@@ -10,7 +10,7 @@ const TABS = [
   { key: 'hidden', label: 'Hidden' },
 ];
 const TRACKED = ['applied', 'interview', 'offer', 'rejected'];
-const CAT_ORDER = ['blend', 'music', 'games', 'tech', 'ai', 'creative'];
+const CAT_ORDER = ['blend', 'music', 'games', 'tech', 'ai', 'creative', 'support', 'otherfit'];
 const PAGE = 100;
 const DAY = 864e5;
 
