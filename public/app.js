@@ -311,15 +311,14 @@ function details(j) {
   </div>`;
 }
 
-// World of Warcraft item rarity colours for the match score.
+// Warcraft Logs parse colours for the match score.
 const RARITIES = [
-  { min: 90, key: 'artifact', name: 'Artifact' },
-  { min: 80, key: 'legendary', name: 'Legendary' },
-  { min: 60, key: 'epic', name: 'Epic' },
-  { min: 40, key: 'rare', name: 'Rare' },
-  { min: 20, key: 'uncommon', name: 'Uncommon' },
-  { min: 10, key: 'common', name: 'Common' },
-  { min: -Infinity, key: 'poor', name: 'Poor' },
+  { min: 100, key: 'gold', name: 'Perfect parse' },
+  { min: 95, key: 'pink', name: 'Pink parse' },
+  { min: 75, key: 'purple', name: 'Purple parse' },
+  { min: 50, key: 'blue', name: 'Blue parse' },
+  { min: 25, key: 'green', name: 'Green parse' },
+  { min: -Infinity, key: 'gray', name: 'Gray parse' },
 ];
 const rarityOf = (score) => RARITIES.find((r) => score >= r.min);
 

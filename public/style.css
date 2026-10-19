@@ -219,15 +219,14 @@ textarea { padding: 8px 10px; width: 100%; resize: vertical; }
   background: var(--surface-2);
   color: var(--muted);
 }
-/* World of Warcraft item rarities: always on a dark tooltip background so every colour reads */
+/* Warcraft Logs parse colours: always on a dark background so every colour reads */
 .score[class*='r-'] { background: #15151c; border: 1px solid currentColor; text-shadow: 0 0 6px #0008; }
-.score.r-poor { color: #9d9d9d; }
-.score.r-common { color: #ffffff; border-color: #55556a; }
-.score.r-uncommon { color: #1eff00; }
-.score.r-rare { color: #3b8cff; } /* WoW rare #0070dd, brightened to read on the dark badge */
-.score.r-epic { color: #b65cff; } /* WoW epic #a335ee, brightened */
-.score.r-legendary { color: #ff8000; box-shadow: 0 0 10px #ff800055; }
-.score.r-artifact { color: #e6cc80; box-shadow: 0 0 12px #e6cc8077; }
+.score.r-gray { color: #9d9d9d; } /* WCL #666666, lightened to read on the dark badge */
+.score.r-green { color: #1eff00; }
+.score.r-blue { color: #3b8cff; } /* WCL #0070ff, brightened */
+.score.r-purple { color: #b65cff; } /* WCL #a335ee, brightened */
+.score.r-pink { color: #e268a8; box-shadow: 0 0 10px #e268a855; }
+.score.r-gold { color: #e5cc80; box-shadow: 0 0 12px #e5cc8077; }
 
 .head { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
 .title { font-weight: 600; font-size: 15px; text-decoration: none; margin-right: 4px; }
