@@ -421,9 +421,9 @@ export default {
           ],
         },
         {
-          // Set points to -5 if you DON'T have a driving licence (common in AV/event jobs).
-          label: 'asks for a driving licence',
-          points: 0,
+          // You have a B licence, so ads requiring one filter out some competition (set to -5 if that changes).
+          label: 'asks for a driving licence (you have one)',
+          points: 1,
           terms: ['b-körkort', 'körkort', 'driving licence', 'driving license', "driver's license", "driver's licence"],
         },
       ],
