@@ -204,7 +204,8 @@ export default {
     categories: {
       music: {
         label: 'Music & Audio',
-        titleWeight: 6,
+        // Your main field, so it outweighs every other category.
+        titleWeight: 8,
         textWeight: 2,
         terms: [
           'music*', 'musician*', 'audio*', 'composer*', 'composition', 'songwrit*', 'song*', 'lyric*',
@@ -221,7 +222,7 @@ export default {
         titleTerms: [
           'sound*', 'voice', 'vocal*', 'band', 'dsp', 'radio', 'speech', 'label', 'copyright*', 'rights', 'metadata', 'catalogue*',
           'catalog manager', 'catalog coordinator', 'catalog specialist', 'catalog operations', 'music catalog*',
-          'music licens*', 'upphovsrätt*', 'rättighet*',
+          'music licens*', 'upphovsrätt*',
         ],
       },
       games: {
@@ -338,7 +339,7 @@ export default {
     },
 
     // Extra points for every job at a company with this tag.
-    companyTagBonus: { music: 4, audio: 3, games: 2, ai: 1 },
+    companyTagBonus: { music: 5, audio: 4, games: 2, ai: 1 },
 
     // Extra points when a job blends music/audio with games, tech or AI: your sweet spot.
     blendBonus: 5,
@@ -388,6 +389,10 @@ export default {
         { max: 4, points: -2 }, // "3+ years"
         { max: 99, points: -5 }, // "5+ years"
       ],
+      // Years you've worked in music (freelance producer since 2015). Music/sound jobs asking for
+      // up to this many years aren't marked down for it, and still count as "realistic".
+      musicYears: 10,
+
       // PhD-level roles (mentions of a PhD / doctorate, research scientist titles).
       unrealisticTerms: ['phd', 'ph.d.', 'doctorate', 'doctoral', 'postdoc*', 'postdoktor*', 'doktorand*', 'research scientist*'],
       unrealisticBonus: -8,
@@ -435,6 +440,28 @@ export default {
       // Role types (matched in the title) by how well they fit where you are now.
       // Each group counts once; groups can stack. Mirrors "Where you fit" in the CV doc.
       roleFit: [
+        {
+          label: 'music / sound craft: your main field',
+          points: 8,
+          terms: [
+            'sound design*', 'audio design*', 'audio artist', 'sound artist', 'composer*', 'kompositör*',
+            'music producer*', 'musikproducent*', 'music editor*', 'audio engineer*', 'audio producer*',
+            'podcast production*', 'audio production*', 'music production*', 'ljuddesign*', 'ljudläggare',
+            'music creator*', 'songwriter*', 'låtskriv*', 'audio qa', 'audio tester', 'audio programmer',
+            'music supervisor', 'implementation designer',
+          ],
+          except: ['media composer'], // Avid Media Composer is video-editing software
+        },
+        {
+          label: 'role at a music / audio company (your industry)',
+          points: 3,
+          companyTags: ['music', 'audio'],
+          terms: [
+            'producer*', 'producent*', 'production*', 'content*', 'creator*', 'coordinator*', 'koordinator*',
+            'specialist*', 'assistant*', 'associate*', 'curator*', 'editor*', 'operations', 'support', 'community*',
+            'partner manager', 'artist*', 'label*', 'catalog*', 'catalogue*', 'qa', 'tester*', 'intern', 'interns', 'internship*',
+          ],
+        },
         {
           label: 'hands-on audio work you can do now',
           points: 4,

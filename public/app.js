@@ -123,11 +123,12 @@ function fill(template, job) {
 
 // ── Filtering ─────────────────────────────────────────────────────────────
 const SENIOR_LEVELS = ['senior', 'lead'];
-/** 'realistic' = not senior/lead, not PhD-level, and asks for at most 3 years (or doesn't say). */
+/** 'realistic' = not senior/lead, not PhD-level, and asks for at most 3 years (or doesn't say;
+ *  music jobs may ask for up to your years in music). */
 function levelOk(j) {
   switch (state.level) {
     case 'realistic':
-      return !SENIOR_LEVELS.includes(j.level) && !j.phd && (j.years == null || j.years <= 3);
+      return !SENIOR_LEVELS.includes(j.level) && !j.phd && (j.years == null || j.years <= 3 || j.musicYearsOk);
     case 'entry':
       return j.level === 'entry' || j.years === 0;
     case 'no-senior':

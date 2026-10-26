@@ -54,7 +54,7 @@ export function compileProfile(profile) {
     pipelineRe: termsRegex(exp.pipelineTerms),
     skillsRe: termsRegex(exp.mySkills),
     descriptionRules: (exp.descriptionRules || []).map((g) => ({ ...g, re: termsRegex(g.terms) })),
-    roleFit: (exp.roleFit || []).map((g) => ({ ...g, re: termsRegex(g.terms), requiresRe: termsRegex(g.requires) })),
+    roleFit: (exp.roleFit || []).map((g) => ({ ...g, re: termsRegex(g.terms), requiresRe: termsRegex(g.requires), exceptRe: termsRegex(g.except) })),
     homeRe: termsRegex(loc.home),
     countryRe: termsRegex(loc.country),
     remoteRegionRe: termsRegex(loc.remoteRegions),
@@ -193,7 +193,11 @@ export function scoreJob(job, rules) {
   adjust(exp.levelBonus?.[level] ?? 0, LEVEL_REASON[level] || level);
 
   const years = yearsRequired(`${title}\n${text}`);
-  if (years != null) {
+  // Your years in music count for music/sound roles.
+  const musicYearsOk = years != null && years > 0 && !!inTitle.music && years <= (exp.musicYears ?? 0);
+  if (musicYearsOk) {
+    adjust(1, `asks for ${years}+ years (you have that in music)`);
+  } else if (years != null) {
     const band = (exp.yearsBonus || []).find((b) => years <= b.max);
     adjust(band?.points ?? 0, years === 0 ? 'no experience required' : `asks for ${years}+ years of experience`);
   }
@@ -213,6 +217,8 @@ export function scoreJob(job, rules) {
   for (const group of rules.roleFit) {
     if (!has(group.re, title) || (group.requiresMusic && !musicSide)) continue;
     if (group.requiresRe && !has(group.requiresRe, title)) continue;
+    if (group.exceptRe && has(group.exceptRe, title)) continue;
+    if (group.companyTags && !tags.some((t) => group.companyTags.includes(t))) continue;
     adjust(group.points, group.label);
     if (group.points > 0) goodFit = true;
   }
@@ -237,6 +243,7 @@ export function scoreJob(job, rules) {
     matched,
     level,
     years,
+    musicYearsOk,
     phd,
     where,
     why,
