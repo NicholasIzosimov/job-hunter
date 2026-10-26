@@ -271,11 +271,17 @@ function writeButton(j) {
   return `<button class="btn ghost" data-act="write" type="button" title="Have Claude write a letter for this job (w)">${label}</button>`;
 }
 
+function pdfButton(j) {
+  return `<a class="btn ghost" href="/api/jobs/${encodeURIComponent(j.id)}/letter.pdf" download title="Download the cover letter as a PDF">⬇ PDF</a>`;
+}
+
 function actions(j) {
   if (state.pending.has(j.id)) {
     return `<button class="btn good" data-act="confirm" type="button" title="Mark as applied (a)">✓ I applied</button>
       <button class="btn ghost" data-act="cancel" type="button">Not yet</button>
-      <button class="btn ghost" data-act="copy" type="button" title="Copy cover letter (c)">Copy letter</button>`;
+      ${writeButton(j)}
+      <button class="btn ghost" data-act="copy" type="button" title="Copy cover letter (c)">Copy letter</button>
+      ${pdfButton(j)}`;
   }
   const expand = `<button class="btn ghost icon" data-act="expand" type="button" title="Details & notes (e)" aria-expanded="${state.expanded.has(j.id)}">${state.expanded.has(j.id) ? '▴' : '▾'}</button>`;
   if (j.status === 'new' || j.status === 'saved') {
@@ -283,6 +289,7 @@ function actions(j) {
     return `<button class="btn primary" data-act="apply" type="button" title="Open application (Enter)">Apply ↗</button>
       ${writeButton(j)}
       <button class="btn ghost" data-act="copy" type="button" title="Copy cover letter (c)">Copy letter</button>
+      ${pdfButton(j)}
       <button class="btn ghost icon ${saved ? 'on' : ''}" data-act="save" type="button" title="${saved ? 'Unsave' : 'Save for later'} (s)">${saved ? '★' : '☆'}</button>
       <button class="btn ghost icon" data-act="hide" type="button" title="Not interested (x)">✕</button>${expand}`;
   }

@@ -10,6 +10,7 @@ import { ROOT, STATUSES, DEFAULT_PROFILE, loadDb, saveDb } from './src/store.js'
 import { loadConfig, runScrape, rescoreAll } from './src/scrape.js';
 import { compileProfile, scoreJob } from './src/score.js';
 import { writeLetter, readFacts } from './src/letters.js';
+import { findChrome, letterPdf, letterFileName } from './src/pdf.js';
 
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const CV_DIR = path.join(ROOT, 'cv');
@@ -222,7 +223,15 @@ async function handle(req, res) {
       const file = path.join(CV_DIR, kit.cvName);
       cv = { name: kit.cvName, type: CV_TYPES[path.extname(file).toLowerCase()], base64: fs.readFileSync(file).toString('base64') };
     }
-    return reply(200, { job: { title: job.title, company: job.company, url: job.url }, kind: kit.kind, letter: kit.letter, cv });
+    let letterFile = null;
+    if (kit.letter) {
+      try {
+        letterFile = { name: letterFileName(db.profile, job.company), type: 'application/pdf', base64: (await letterPdf(kit.letter, db.profile)).toString('base64') };
+      } catch (err) {
+        console.error('Letter PDF failed:', err.message); // the text letter still works
+      }
+    }
+    return reply(200, { job: { title: job.title, company: job.company, url: job.url }, kind: kit.kind, letter: kit.letter, cv, letterFile });
   }
 
   if (pathname === '/api/profile') {
@@ -233,6 +242,23 @@ async function handle(req, res) {
       saveDb(db);
       return send(res, 200, { profile: db.profile, key: db.applyKey, cvFiles: cvFiles() });
     }
+  }
+
+  // The job's cover letter as a PDF download.
+  const pdfMatch = pathname.match(/^\/api\/jobs\/(.+)\/letter\.pdf$/);
+  if (pdfMatch && method === 'GET') {
+    const job = db.jobs[decodeURIComponent(pdfMatch[1])];
+    if (!job) return send(res, 404, { error: 'Job not found' });
+    const { letter } = applyKit(job);
+    if (!letter) return send(res, 404, { error: 'No cover letter for this job yet' });
+    const pdf = await letterPdf(letter, db.profile);
+    const name = letterFileName(db.profile, job.company);
+    res.writeHead(200, {
+      'content-type': 'application/pdf',
+      'content-disposition': `attachment; filename="${name.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+      'cache-control': 'no-store',
+    });
+    return res.end(pdf);
   }
 
   // Has Claude write a cover letter for this job (takes ~20-60 s) and saves it on the job.
@@ -370,17 +396,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-function findChrome() {
-  const candidates =
-    process.platform === 'win32'
-      ? [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA]
-          .filter(Boolean)
-          .map((dir) => path.join(dir, 'Google', 'Chrome', 'Application', 'chrome.exe'))
-      : process.platform === 'darwin'
-        ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']
-        : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium'];
-  return candidates.find((p) => fs.existsSync(p));
-}
 
 /** Opens the dashboard in Chrome (config.browser: 'chrome'), falling back to the default browser. */
 function openBrowser() {

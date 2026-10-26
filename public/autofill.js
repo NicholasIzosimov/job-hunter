@@ -150,6 +150,23 @@
     }
   }
 
+  /* No cover-letter text box filled? Attach the letter as a PDF to a "cover letter" upload field. */
+  if (kit && kit.letterFile && !letterDone && !cfg.dryRun) {
+    const target = [...document.querySelectorAll('input[type=file]')].find((f) => /cover|letter|personligt brev|motivation/.test(describe(f)));
+    if (target && !target.files.length) {
+      try {
+        const bytes = Uint8Array.from(atob(kit.letterFile.base64), (c) => c.charCodeAt(0));
+        const dt = new DataTransfer();
+        dt.items.add(new File([bytes], kit.letterFile.name, { type: 'application/pdf' }));
+        target.files = dt.files;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        letterDone = true;
+        filled.push('cover letter PDF');
+      } catch (e) { /* some sites only accept files from their own picker */ }
+    }
+  }
+
   const required = [...document.querySelectorAll('input, textarea, select')].filter(
     (el) => (el.required || el.getAttribute('aria-required') === 'true') && isShown(el) && !el.value && el.type !== 'file' && el.type !== 'hidden',
   ).map((el) => describe(el).split(' | ').reverse().find((s) => s.length > 2 && s.length < 80) || el.name || 'a field');
