@@ -214,6 +214,7 @@ export function scoreJob(job, rules) {
   }
 
   let goodFit = false;
+  const fitFields = new Set();
   for (const group of rules.roleFit) {
     if (!has(group.re, title) || (group.requiresMusic && !musicSide)) continue;
     if (group.requiresRe && !has(group.requiresRe, title)) continue;
@@ -221,7 +222,19 @@ export function scoreJob(job, rules) {
     if (group.companyTags && !tags.some((t) => group.companyTags.includes(t))) continue;
     adjust(group.points, group.label);
     if (group.points > 0) goodFit = true;
+    if (group.field) fitFields.add(group.field);
   }
+
+  // Your order of preference between fields: the job's best field sets a bonus (profile.fieldBonus).
+  const gamesSide = inTitle.games || tags.includes('games');
+  const field = fitFields.has('craft') ? 'craft'
+    : musicSide && gamesSide ? 'music-games'
+    : musicSide ? 'music'
+    : gamesSide ? 'games'
+    : inTitle.support || fitFields.has('support') ? 'support'
+    : inTitle.tech ? 'tech'
+    : 'other';
+  adjust(rules.fieldBonus?.[field] ?? 0, FIELD_REASON[field]);
 
   const juniorFriendly = level === 'entry' || (years != null && years <= 2);
   if (inTitle.tech && !STUDIO_ROLE.test(title) && !level && !juniorFriendly && !goodFit) {
@@ -244,6 +257,7 @@ export function scoreJob(job, rules) {
     level,
     years,
     musicYearsOk,
+    field,
     phd,
     where,
     why,
@@ -261,6 +275,15 @@ const WHERE_REASON = {
   country: 'elsewhere in your country',
   'remote-elsewhere': 'remote only for other regions',
   elsewhere: 'on-site abroad',
+};
+const FIELD_REASON = {
+  craft: 'field: music production / sound design',
+  'music-games': 'field: music + games',
+  music: 'field: music industry',
+  games: 'field: games',
+  support: 'field: IT / customer support',
+  tech: 'field: programming',
+  other: 'field: other',
 };
 const LEVEL_REASON = {
   entry: 'junior / intern / trainee role',

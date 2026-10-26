@@ -344,6 +344,11 @@ export default {
     // Extra points when a job blends music/audio with games, tech or AI: your sweet spot.
     blendBonus: 5,
 
+    // Your order of preference between fields, best first. Every listed job gets the points of
+    // its best field: music production / sound design > music + games > music industry > games
+    // > IT / customer support > programming. "other" = translation, admin, events etc.
+    fieldBonus: { craft: 6, 'music-games': 5, music: 4, games: 2, support: 0, other: 0, tech: -3 },
+
     // Points by source. Aggregator boards re-list jobs collected from elsewhere and check
     // them less than a company's own careers site, so they rank a little lower.
     // Platsbanken (run by Arbetsförmedlingen) stays neutral.
@@ -443,6 +448,7 @@ export default {
         {
           label: 'music / sound craft: your main field',
           points: 8,
+          field: 'craft',
           terms: [
             'sound design*', 'audio design*', 'audio artist', 'sound artist', 'composer*', 'kompositör*',
             'music producer*', 'musikproducent*', 'music editor*', 'audio engineer*', 'audio producer*',
@@ -465,6 +471,7 @@ export default {
         {
           label: 'hands-on audio work you can do now',
           points: 4,
+          field: 'craft',
           terms: [
             'audio editor', 'sound technician', 'audio technician', 'ljudtekni*', 'podcast producer', 'podcast editor',
             'mixing engineer', 'mastering engineer', 'recording engineer', 'live sound', 'eventtekni*', 'scentekni*',
@@ -565,6 +572,7 @@ export default {
         {
           label: 'support role',
           points: 3,
+          field: 'support',
           terms: [
             'customer support', 'support agent', 'support specialist', 'customer success', 'player support',
             'community support', 'kundtjänst*', 'kundsupport*', 'kundservice*', 'helpdesk*', 'servicedesk*', 'support',
@@ -638,6 +646,6 @@ export default {
     // Teaching roles are excluded because Platsbanken is full of music-teacher ads;
     // delete those entries if you'd consider teaching.
     // Sales jobs that are often low-integrity (cold calling, door to door, commission only).
-    excludeTitle: ['telemarket*', 'telefonförsälj*', 'dörrförsälj*', 'door to door', 'commission only', 'provisionsbaserad*', '*lärare', 'lärarvikarie*', 'teacher*', 'förskol*', 'fritidshem*', 'barnskötare', 'rektor', 'elevassistent*'],
+    excludeTitle: ['vikariera*', 'vaktmästare', 'telemarket*', 'telefonförsälj*', 'dörrförsälj*', 'door to door', 'commission only', 'provisionsbaserad*', '*lärare', 'lärarvikarie*', 'teacher*', 'förskol*', 'fritidshem*', 'barnskötare', 'rektor', 'elevassistent*'],
   },
 };
