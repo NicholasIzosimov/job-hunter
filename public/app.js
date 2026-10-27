@@ -37,6 +37,7 @@ const state = {
   mailTab: 'unread', // Mail panel: 'unread' or 'read'
   mailOpen: new Set(), // emails expanded to show their text
   mailBodies: new Map(), // message id → full text
+  mailStay: new Set(), // read while open in the Unread tab: stays listed there until you switch tabs
   selected: null,
   limit: PAGE,
   lastUndo: null,
@@ -267,13 +268,26 @@ function mailItem(msg, jobs) {
     <summary>
       <div class="row">
         <span class="subject">${esc(msg.subject)}</span>
-        <a class="gmail" href="${esc(msg.link)}" target="_blank" rel="noopener" title="Open in Gmail">Gmail ↗</a>
+        <span class="links">${msg.unread ? `<button class="btn ghost markread" data-act="mail-read" data-msg="${esc(msg.id)}" type="button" title="Mark as read in Gmail">Read</button>` : ''}<a class="gmail" href="${esc(msg.link)}" target="_blank" rel="noopener" title="Open in Gmail">Gmail ↗</a></span>
       </div>
       <span class="from">${esc(msg.fromName || msg.from)} &lt;${esc(msg.from)}&gt; · ${esc(ago(msg.date))}</span>
     </summary>
     <div class="mail-body">${body == null ? 'Loading the email…' : esc(body) || '(This email has no text. Open it in Gmail.)'}</div>
     ${about}
   </details></li>`;
+}
+
+/** Marks an email read in Gmail. `stay`: keep it in view (you're reading it) instead of moving it to Read. */
+async function setRead(id, { stay = false } = {}) {
+  const msg = state.mail?.messages.find((m) => m.id === id);
+  if (!msg?.unread) return;
+  if (stay) state.mailStay.add(id);
+  try {
+    setMail(await api('/api/mail/read', { method: 'POST', body: { id } }));
+  } catch (err) {
+    state.mailStay.delete(id);
+    toast(`Could not mark it as read: ${err.message}`);
+  }
 }
 
 /** Fetches an email's full text the first time it's opened, then fills every open copy of it. */
@@ -307,12 +321,12 @@ function renderMailDrawer() {
   status.textContent = m.checking
     ? 'Checking Gmail…'
     : m.error || (m.connected ? `Connected as ${m.user}${checked} · ${count}` : 'Not connected yet.');
-  const unread = m.messages.filter((msg) => msg.unread);
+  const unread = m.messages.filter((msg) => msg.unread || state.mailStay.has(msg.id));
   const read = m.messages.filter((msg) => !msg.unread);
   const tab = state.mailTab;
   for (const b of document.querySelectorAll('#mailTabs [data-mailtab]')) {
     b.classList.toggle('active', b.dataset.mailtab === tab);
-    b.querySelector('.n').textContent = (b.dataset.mailtab === 'unread' ? unread : read).length;
+    b.querySelector('.n').textContent = b.dataset.mailtab === 'unread' ? m.unread : read.length;
   }
   $('#mailTabs').hidden = !m.messages.length;
   const shown = tab === 'unread' ? unread : read;
@@ -322,6 +336,7 @@ function renderMailDrawer() {
 }
 
 async function openMail() {
+  state.mailStay.clear();
   $('#mailDrawer').hidden = false;
   await loadMail();
   state.mailTab = state.mail?.unread || !state.mail?.messages.length ? 'unread' : 'read';
@@ -1107,6 +1122,7 @@ $('#mailTabs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-mailtab]');
   if (!b) return;
   state.mailTab = b.dataset.mailtab;
+  state.mailStay.clear();
   renderMailDrawer();
 });
 // Expanding an email (in the Mail panel or a job's details) loads its full text.
@@ -1118,7 +1134,21 @@ document.addEventListener(
     if (el.open) {
       state.mailOpen.add(el.dataset.msg);
       loadMailBody(el.dataset.msg);
+      setRead(el.dataset.msg, { stay: true }); // opening an email counts as reading it
     } else state.mailOpen.delete(el.dataset.msg);
+  },
+  true,
+);
+// "Read" button: marks it read without opening it (and without toggling the email open).
+document.addEventListener(
+  'click',
+  (e) => {
+    const btn = e.target.closest('[data-act="mail-read"]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    btn.disabled = true;
+    setRead(btn.dataset.msg);
   },
   true,
 );

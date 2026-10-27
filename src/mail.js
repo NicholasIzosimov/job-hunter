@@ -1,6 +1,7 @@
 // Reads your Gmail inbox over IMAP with an app password and matches emails to the jobs you've
-// applied to. Read-only: the inbox is opened with EXAMINE and headers are fetched with BODY.PEEK,
-// so nothing is ever marked as read, moved, sent or deleted. No packages: just node:tls.
+// applied to. Checking and reading open the inbox read-only (EXAMINE, BODY.PEEK); the one change it
+// can make is marking an email as read when you open it or click Read. Nothing is ever moved, sent or
+// deleted. No packages: just node:tls.
 
 import tls from 'node:tls';
 
@@ -119,8 +120,8 @@ export function parseFrom(from = '') {
   return { name: '', address: from.trim().toLowerCase() };
 }
 
-/** Signs in, opens the inbox read-only, runs `fn(imap)`, then disconnects. */
-async function withInbox(user, password, fn) {
+/** Signs in, opens the inbox (read-only unless writable), runs fn(imap), then disconnects. */
+async function withInbox(user, password, fn, { writable = false } = {}) {
   const socket = tls.connect({ host: HOST, port: 993, servername: HOST });
   const imap = new Imap(socket);
   try {
@@ -134,7 +135,7 @@ async function withInbox(user, password, fn) {
           : `Gmail sign-in failed: ${err.message}`,
       );
     }
-    await imap.run('EXAMINE INBOX'); // read-only
+    await imap.run(writable ? 'SELECT INBOX' : 'EXAMINE INBOX');
     const result = await fn(imap);
     await imap.run('LOGOUT').catch(() => {});
     return result;
@@ -196,6 +197,11 @@ export function fetchBody({ user, password, uid, maxBytes = 3_000_000 }) {
     if (!raw) throw new Error('Gmail sent no content for this email.');
     return messageText(raw);
   });
+}
+
+/** Marks one email (by its inbox UID) as read in Gmail. */
+export function markRead({ user, password, uid }) {
+  return withInbox(user, password, (imap) => imap.run(`UID STORE ${Number(uid)} +FLAGS.SILENT (\\Seen)`), { writable: true });
 }
 
 // ── MIME: the readable text of an email ─────────────────────────────────────────────────────────

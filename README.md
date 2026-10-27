@@ -70,13 +70,14 @@ Verification). Job Hunter then checks your inbox every 10 minutes (`mailCheckMin
 and shows emails from companies you've applied to on the matching job: a **📧 1 unread** badge on the
 card, the emails in its details, and an unread count on the Mail button. Each email opens in Gmail.
 
-* It only reads: the inbox is opened read-only and nothing is marked as read, sent, moved or deleted.
+* The only change it makes in Gmail is marking an email as read (when you open it here or click
+  **Read**). Nothing is ever sent, moved or deleted.
 * An email matches a job when it comes from the company's own domain, or when it's clearly about an
   application ("application", "ansökan", "interview"…) and names the company in the sender or subject,
   and arrived after the day before you applied. Newsletters from the company don't count.
 * The Mail panel lists **Unread** and **Read** emails from all companies. Click one to read the whole
-  email inside Job Hunter (fetched from Gmail when you open it, still without marking it read), or
-  **Gmail ↗** to open it there.
+  email inside Job Hunter (this marks it read in Gmail), click **Read** to mark it read without opening
+  it (e.g. a "thanks for applying" email), or **Gmail ↗** to open it there.
 * Wrong match? **Not this job** removes it for good.
 * The app password is stored only in `data/jobs.json` on this computer. **Disconnect** deletes it;
   also withdraw it on Google's App passwords page.

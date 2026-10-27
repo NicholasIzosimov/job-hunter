@@ -11,7 +11,7 @@ import { loadConfig, runScrape, rescoreAll } from './src/scrape.js';
 import { compileProfile, scoreJob } from './src/score.js';
 import { writeLetter, readFacts } from './src/letters.js';
 import { findChrome, letterPdf, letterFileName } from './src/pdf.js';
-import { fetchInbox, fetchBody, matchEmails } from './src/mail.js';
+import { fetchInbox, fetchBody, markRead, matchEmails } from './src/mail.js';
 
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const CV_DIR = path.join(ROOT, 'cv');
@@ -397,6 +397,25 @@ async function handle(req, res) {
       }
     }
     return send(res, 200, { id, text: mailBodies.get(id) });
+  }
+
+  // Marks an email as read in Gmail (when you open it here, or click Read).
+  if (method === 'POST' && pathname === '/api/mail/read') {
+    const body = await readBody(req);
+    const msg = (db.mail?.messages || []).find((m) => m.id === body.id);
+    if (!msg) return send(res, 404, { error: 'Email not found' });
+    if (msg.unread) {
+      try {
+        await markRead({ user: db.mail.user, password: db.mail.password, uid: msg.uid });
+      } catch (err) {
+        return send(res, 502, { error: err.message });
+      }
+      msg.unread = false;
+      const cached = lastInbox.find((m) => m.id === msg.id);
+      if (cached) cached.unread = false;
+      saveDb(db);
+    }
+    return send(res, 200, mailState());
   }
 
   if (method === 'POST' && pathname === '/api/mail/check') {

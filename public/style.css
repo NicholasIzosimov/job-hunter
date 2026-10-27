@@ -390,3 +390,5 @@ dialog .hint { margin: 0; }
 .mail-tabs[hidden] { display: none; }
 .mail-tabs .n { color: var(--muted); font-size: 12px; margin-left: 2px; }
 .mail-setup > summary { cursor: pointer; font-weight: 600; margin: 10px 0 6px; }
+.mail-item .links { display: flex; align-items: center; gap: 8px; flex: none; }
+.mail-item .markread { font-size: 11px; padding: 0 8px; height: 22px; }
