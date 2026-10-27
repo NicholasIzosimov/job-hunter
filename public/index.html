@@ -161,8 +161,8 @@
       </p>
 
       <form id="mailForm" class="profile-form" autocomplete="off">
-        <div id="mailSetup">
-          <h3>Connect Gmail</h3>
+        <details id="mailSetup" class="mail-setup" open>
+          <summary>Gmail connection</summary>
           <ol class="hint">
             <li>Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>
               (needs 2-Step Verification, which you can turn on from the same page).</li>
@@ -177,14 +177,19 @@
             <button id="mailDisconnect" class="btn ghost" type="button" hidden>Disconnect</button>
             <button class="btn primary" type="submit">Save &amp; check</button>
           </div>
-        </div>
+        </details>
       </form>
 
       <div class="mail-status">
         <span id="mailStatus" class="hint"></span>
         <button id="mailCheck" class="btn ghost" type="button" hidden>Check now</button>
       </div>
+      <nav id="mailTabs" class="mail-tabs" aria-label="Unread or read">
+        <button class="tab" data-mailtab="unread" type="button">Unread <span class="n"></span></button>
+        <button class="tab" data-mailtab="read" type="button">Read <span class="n"></span></button>
+      </nav>
       <ul id="mailList" class="mail-list"></ul>
+      <p id="mailEmpty" class="hint" hidden></p>
     </aside>
 
     <dialog id="addDialog">

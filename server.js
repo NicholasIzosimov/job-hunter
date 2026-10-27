@@ -11,7 +11,7 @@ import { loadConfig, runScrape, rescoreAll } from './src/scrape.js';
 import { compileProfile, scoreJob } from './src/score.js';
 import { writeLetter, readFacts } from './src/letters.js';
 import { findChrome, letterPdf, letterFileName } from './src/pdf.js';
-import { fetchInbox, matchEmails } from './src/mail.js';
+import { fetchInbox, fetchBody, matchEmails } from './src/mail.js';
 
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const CV_DIR = path.join(ROOT, 'cv');
@@ -91,6 +91,7 @@ async function startScrape() {
 const MAIL_TRACKED = ['applied', 'interview', 'offer', 'rejected'];
 const mailCheck = { running: null };
 let lastInbox = []; // headers from the last check, so "not this job" can re-match without Gmail
+const mailBodies = new Map(); // message id → full text, fetched when you open an email
 
 function trackedJobs() {
   return Object.values(db.jobs).filter((j) => MAIL_TRACKED.includes(j.status) && j.appliedAt);
@@ -366,6 +367,7 @@ async function handle(req, res) {
       if (body.disconnect) {
         db.mail = { hidden: db.mail?.hidden || [] };
         lastInbox = [];
+        mailBodies.clear();
         saveDb(db);
         return send(res, 200, mailState());
       }
@@ -380,6 +382,21 @@ async function handle(req, res) {
       await checkMail();
       return send(res, 200, mailState());
     }
+  }
+
+  // One email's full text, fetched from Gmail when you open it (kept in memory, not on disk).
+  if (method === 'GET' && pathname === '/api/mail/body') {
+    const id = new URL(req.url, 'http://x').searchParams.get('id') || '';
+    const msg = (db.mail?.messages || []).find((m) => m.id === id);
+    if (!msg) return send(res, 404, { error: 'Email not found' });
+    if (!mailBodies.has(id)) {
+      try {
+        mailBodies.set(id, await fetchBody({ user: db.mail.user, password: db.mail.password, uid: msg.uid }));
+      } catch (err) {
+        return send(res, 502, { error: err.message });
+      }
+    }
+    return send(res, 200, { id, text: mailBodies.get(id) });
   }
 
   if (method === 'POST' && pathname === '/api/mail/check') {

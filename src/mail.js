@@ -119,11 +119,8 @@ export function parseFrom(from = '') {
   return { name: '', address: from.trim().toLowerCase() };
 }
 
-/**
- * Fetches the headers of inbox messages received since `since` (newest `max`).
- * Resolves to [{ id, uid, from, fromName, subject, date, unread, link }].
- */
-export async function fetchInbox({ user, password, since, max = 2000 }) {
+/** Signs in, opens the inbox read-only, runs `fn(imap)`, then disconnects. */
+async function withInbox(user, password, fn) {
   const socket = tls.connect({ host: HOST, port: 993, servername: HOST });
   const imap = new Imap(socket);
   try {
@@ -138,6 +135,20 @@ export async function fetchInbox({ user, password, since, max = 2000 }) {
       );
     }
     await imap.run('EXAMINE INBOX'); // read-only
+    const result = await fn(imap);
+    await imap.run('LOGOUT').catch(() => {});
+    return result;
+  } finally {
+    socket.destroy();
+  }
+}
+
+/**
+ * Fetches the headers of inbox messages received since `since` (newest `max`).
+ * Resolves to [{ id, uid, from, fromName, subject, date, unread, link }].
+ */
+export function fetchInbox({ user, password, since, max = 2000 }) {
+  return withInbox(user, password, async (imap) => {
     const found = await imap.run(`UID SEARCH SINCE ${imapDate(since)}`);
     const uids = found
       .filter((r) => /^\* SEARCH/i.test(r.text))
@@ -169,11 +180,93 @@ export async function fetchInbox({ user, password, since, max = 2000 }) {
           : `https://mail.google.com/mail/?authuser=${encodeURIComponent(user)}#inbox`,
       });
     }
-    await imap.run('LOGOUT').catch(() => {});
     return messages;
-  } finally {
-    socket.destroy();
+  });
+}
+
+/** The full text of one email (by its inbox UID), without marking it as read. */
+export function fetchBody({ user, password, uid, maxBytes = 3_000_000 }) {
+  return withInbox(user, password, async (imap) => {
+    const sized = await imap.run(`UID FETCH ${Number(uid)} (UID RFC822.SIZE)`);
+    const size = Number(sized.map((r) => r.text.match(/\bRFC822\.SIZE (\d+)/i)?.[1]).find(Boolean));
+    if (!size) throw new Error('This email is no longer in your inbox (archived or deleted). Open it in Gmail instead.');
+    // Huge emails are mostly attachments: the text comes first, so the start is enough.
+    const fetched = await imap.run(`UID FETCH ${Number(uid)} (UID BODY.PEEK[]${size > maxBytes ? `<0.${maxBytes}>` : ''})`);
+    const raw = fetched.find((r) => r.literals.length)?.literals[0];
+    if (!raw) throw new Error('Gmail sent no content for this email.');
+    return messageText(raw);
+  });
+}
+
+// ── MIME: the readable text of an email ─────────────────────────────────────────────────────────
+// Work on "binary" (latin1) strings so every byte survives until the part's charset is known.
+function decodePart(body, encoding, charset) {
+  let bytes;
+  if (/base64/i.test(encoding)) bytes = Buffer.from(body.replace(/[^A-Za-z0-9+/=]/g, ''), 'base64');
+  else if (/quoted-printable/i.test(encoding)) {
+    bytes = Buffer.from(body.replace(/=\r?\n/g, '').replace(/=([0-9A-Fa-f]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16))), 'latin1');
+  } else bytes = Buffer.from(body, 'latin1');
+  try {
+    return new TextDecoder((charset || 'utf-8').toLowerCase()).decode(bytes);
+  } catch {
+    return bytes.toString('utf8');
   }
+}
+
+const param = (header, name) => header.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|([^;\\s]+))`, 'i'))?.slice(1).find((v) => v != null);
+
+/** Collects { plain, html } from a MIME entity (recursing into multipart). */
+function collect(entity, out = { plain: '', html: '' }) {
+  const sep = entity.match(/\r?\n\r?\n/);
+  const head = sep ? entity.slice(0, sep.index) : entity;
+  const body = sep ? entity.slice(sep.index + sep[0].length) : '';
+  const h = parseHeaders(head);
+  const type = (h['content-type'] || 'text/plain').toLowerCase();
+  if (/attachment/i.test(h['content-disposition'] || '')) return out;
+  if (type.startsWith('multipart/')) {
+    const boundary = param(h['content-type'], 'boundary');
+    if (!boundary) return out;
+    const parts = body.split(`--${boundary}`).slice(1);
+    for (const part of parts) {
+      if (part.startsWith('--')) break; // closing boundary
+      collect(part.replace(/^\r?\n/, ''), out);
+    }
+  } else if (type.startsWith('text/plain') && !out.plain) {
+    out.plain = decodePart(body, h['content-transfer-encoding'], param(h['content-type'] || '', 'charset'));
+  } else if (type.startsWith('text/html') && !out.html) {
+    out.html = decodePart(body, h['content-transfer-encoding'], param(h['content-type'] || '', 'charset'));
+  }
+  return out;
+}
+
+const ENTITIES = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", ndash: '–', mdash: '—', hellip: '…', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“' };
+
+export function htmlToText(html) {
+  return html
+    .replace(/<(head|style|script|title)\b[\s\S]*?<\/\1>/gi, '')
+    .replace(/<a\b[^>]*href="(https?:[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (m, href, text) => {
+      const label = text.replace(/<[^>]+>/g, '').trim();
+      return label && !href.includes(label) && label.length < 80 ? `${label} (${href})` : label || href;
+    })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<li\b[^>]*>/gi, '\n• ')
+    .replace(/<\/(p|div|tr|h[1-6]|li|table|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) =>
+      e[0] === '#' ? String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : Number(e.slice(1))) : (ENTITIES[e.toLowerCase()] ?? m),
+    );
+}
+
+/** Plain text of a raw email: its text/plain part, or its HTML part turned into text. */
+export function messageText(raw) {
+  const { plain, html } = collect(raw.toString('latin1'));
+  const text = plain.trim() ? plain : htmlToText(html);
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t ]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 30_000);
 }
 
 // ── Which job is an email about? ───────────────────────────────────────────────────────────────

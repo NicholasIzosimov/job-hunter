@@ -34,6 +34,9 @@ const state = {
   writing: new Set(), // jobs Claude is writing a letter for right now
   mail: null, // /api/mail: connection status + emails matched to your applications
   mailByJob: new Map(), // job id → its emails
+  mailTab: 'unread', // Mail panel: 'unread' or 'read'
+  mailOpen: new Set(), // emails expanded to show their text
+  mailBodies: new Map(), // message id → full text
   selected: null,
   limit: PAGE,
   lastUndo: null,
@@ -259,11 +262,33 @@ function mailItem(msg, jobs) {
         <button class="btn ghost notthis" data-act="mail-hide" data-msg="${esc(msg.id)}" data-job="${esc(j.id)}" type="button" title="This email isn't about this job">Not this job</button></div>`,
     )
     .join('');
-  return `<li class="mail-item ${msg.unread ? 'unread' : ''}">
-    <a class="subject" href="${esc(msg.link)}" target="_blank" rel="noopener" title="Open in Gmail">${esc(msg.subject)}</a>
-    <span class="from">${esc(msg.fromName || msg.from)} &lt;${esc(msg.from)}&gt; · ${esc(ago(msg.date))}</span>
+  const body = state.mailBodies.get(msg.id);
+  return `<li><details class="mail-item ${msg.unread ? 'unread' : ''}" data-msg="${esc(msg.id)}" ${state.mailOpen.has(msg.id) ? 'open' : ''}>
+    <summary>
+      <div class="row">
+        <span class="subject">${esc(msg.subject)}</span>
+        <a class="gmail" href="${esc(msg.link)}" target="_blank" rel="noopener" title="Open in Gmail">Gmail ↗</a>
+      </div>
+      <span class="from">${esc(msg.fromName || msg.from)} &lt;${esc(msg.from)}&gt; · ${esc(ago(msg.date))}</span>
+    </summary>
+    <div class="mail-body">${body == null ? 'Loading the email…' : esc(body) || '(This email has no text. Open it in Gmail.)'}</div>
     ${about}
-  </li>`;
+  </details></li>`;
+}
+
+/** Fetches an email's full text the first time it's opened, then fills every open copy of it. */
+async function loadMailBody(id) {
+  if (state.mailBodies.has(id)) return;
+  let text;
+  try {
+    text = (await api(`/api/mail/body?id=${encodeURIComponent(id)}`)).text;
+    state.mailBodies.set(id, text);
+  } catch (err) {
+    text = `Could not load this email: ${err.message}`;
+  }
+  for (const el of document.querySelectorAll('details.mail-item')) {
+    if (el.dataset.msg === id) el.querySelector('.mail-body').textContent = text || '(This email has no text. Open it in Gmail.)';
+  }
 }
 
 function renderMailDrawer() {
@@ -282,12 +307,25 @@ function renderMailDrawer() {
   status.textContent = m.checking
     ? 'Checking Gmail…'
     : m.error || (m.connected ? `Connected as ${m.user}${checked} · ${count}` : 'Not connected yet.');
-  $('#mailList').innerHTML = m.messages.map((msg) => mailItem(msg, msg.jobs)).join('');
+  const unread = m.messages.filter((msg) => msg.unread);
+  const read = m.messages.filter((msg) => !msg.unread);
+  const tab = state.mailTab;
+  for (const b of document.querySelectorAll('#mailTabs [data-mailtab]')) {
+    b.classList.toggle('active', b.dataset.mailtab === tab);
+    b.querySelector('.n').textContent = (b.dataset.mailtab === 'unread' ? unread : read).length;
+  }
+  $('#mailTabs').hidden = !m.messages.length;
+  const shown = tab === 'unread' ? unread : read;
+  $('#mailList').innerHTML = shown.map((msg) => mailItem(msg, msg.jobs)).join('');
+  $('#mailEmpty').hidden = !m.messages.length || shown.length > 0;
+  $('#mailEmpty').textContent = tab === 'unread' ? 'No unread replies right now.' : 'No read emails yet.';
 }
 
 async function openMail() {
   $('#mailDrawer').hidden = false;
   await loadMail();
+  state.mailTab = state.mail?.unread || !state.mail?.messages.length ? 'unread' : 'read';
+  $('#mailSetup').open = !state.mail?.connected || !!state.mail?.error; // folded away once it works
   renderMailDrawer();
 }
 
@@ -1064,6 +1102,32 @@ $('#mailCheck').addEventListener('click', async () => {
 $('#mailList').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-act="mail-hide"]');
   if (btn) hideMail(btn.dataset.msg, btn.dataset.job);
+});
+$('#mailTabs').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-mailtab]');
+  if (!b) return;
+  state.mailTab = b.dataset.mailtab;
+  renderMailDrawer();
+});
+// Expanding an email (in the Mail panel or a job's details) loads its full text.
+document.addEventListener(
+  'toggle',
+  (e) => {
+    const el = e.target;
+    if (!el.matches?.('details.mail-item')) return;
+    if (el.open) {
+      state.mailOpen.add(el.dataset.msg);
+      loadMailBody(el.dataset.msg);
+    } else state.mailOpen.delete(el.dataset.msg);
+  },
+  true,
+);
+// Opening an email in Gmail marks it read there; check again shortly so it moves to "Read".
+let gmailRecheck;
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('a.gmail')) return;
+  clearTimeout(gmailRecheck);
+  gmailRecheck = setTimeout(() => api('/api/mail/check', { method: 'POST' }).then(setMail, () => {}), 30_000);
 });
 
 // ── Add job dialog ────────────────────────────────────────────────────────
