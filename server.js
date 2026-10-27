@@ -11,6 +11,7 @@ import { loadConfig, runScrape, rescoreAll } from './src/scrape.js';
 import { compileProfile, scoreJob } from './src/score.js';
 import { writeLetter, readFacts } from './src/letters.js';
 import { findChrome, letterPdf, letterFileName } from './src/pdf.js';
+import { fetchInbox, matchEmails } from './src/mail.js';
 
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const CV_DIR = path.join(ROOT, 'cv');
@@ -84,6 +85,65 @@ async function startScrape() {
   }
 }
 
+// ── Email: replies from companies you've applied to (read-only Gmail via IMAP) ──
+// db.mail = { user, password (Gmail app password; never sent to the browser), lastCheck, error,
+//             messages (only the matched ones), hidden ("messageId|jobId" pairs you rejected) }
+const MAIL_TRACKED = ['applied', 'interview', 'offer', 'rejected'];
+const mailCheck = { running: null };
+let lastInbox = []; // headers from the last check, so "not this job" can re-match without Gmail
+
+function trackedJobs() {
+  return Object.values(db.jobs).filter((j) => MAIL_TRACKED.includes(j.status) && j.appliedAt);
+}
+
+function rematchMail() {
+  const mail = db.mail;
+  mail.messages = matchEmails(lastInbox, trackedJobs(), mail.hidden);
+}
+
+function checkMail() {
+  const mail = db.mail;
+  if (!mail?.user || !mail.password) return Promise.resolve();
+  if (mailCheck.running) return mailCheck.running;
+  const jobs = trackedJobs();
+  const earliest = Math.min(...jobs.map((j) => Date.parse(j.appliedAt)));
+  // From the day before your first tracked application, at most 120 days back.
+  const since = new Date(Math.max(Number.isFinite(earliest) ? earliest - 864e5 : Date.now(), Date.now() - 120 * 864e5));
+  mailCheck.running = (async () => {
+    try {
+      lastInbox = jobs.length ? await fetchInbox({ user: mail.user, password: mail.password, since }) : [];
+      rematchMail();
+      mail.error = null;
+    } catch (err) {
+      mail.error = err.message;
+      console.error('Mail check failed:', err.message);
+    } finally {
+      mail.lastCheck = new Date().toISOString();
+      saveDb(db);
+      mailCheck.running = null;
+    }
+  })();
+  return mailCheck.running;
+}
+
+function mailForJob(id) {
+  return (db.mail?.messages || []).filter((m) => m.jobIds.includes(id));
+}
+
+function mailState() {
+  const mail = db.mail || {};
+  const titleOf = (id) => db.jobs[id] && { id, title: db.jobs[id].title, company: db.jobs[id].company };
+  return {
+    user: mail.user || '',
+    connected: !!(mail.user && mail.password),
+    checking: !!mailCheck.running,
+    lastCheck: mail.lastCheck || null,
+    error: mail.error || null,
+    unread: (mail.messages || []).filter((m) => m.unread).length,
+    messages: (mail.messages || []).map((m) => ({ ...m, jobs: m.jobIds.map(titleOf).filter(Boolean) })),
+  };
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function send(res, status, body, type = 'application/json; charset=utf-8') {
   res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' });
@@ -111,6 +171,8 @@ const str = (v, max = 20000) => (typeof v === 'string' ? v.slice(0, max) : '');
 /** The list view skips the (large) description; the UI fetches it when a card is expanded. */
 function summary(j) {
   const { description, ...rest } = j;
+  const mail = mailForJob(j.id);
+  if (mail.length) rest.mail = { total: mail.length, unread: mail.filter((m) => m.unread).length };
   return rest;
 }
 
@@ -297,6 +359,47 @@ async function handle(req, res) {
     });
   }
 
+  if (pathname === '/api/mail') {
+    if (method === 'GET') return send(res, 200, mailState());
+    if (method === 'PUT') {
+      const body = await readBody(req);
+      if (body.disconnect) {
+        db.mail = { hidden: db.mail?.hidden || [] };
+        lastInbox = [];
+        saveDb(db);
+        return send(res, 200, mailState());
+      }
+      db.mail ||= {};
+      const user = str(body.user, 200).trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(user)) return send(res, 400, { error: 'Enter your Gmail address' });
+      db.mail.user = user;
+      const password = str(body.password, 200).replace(/\s+/g, '');
+      if (password) db.mail.password = password;
+      db.mail.error = null;
+      saveDb(db);
+      await checkMail();
+      return send(res, 200, mailState());
+    }
+  }
+
+  if (method === 'POST' && pathname === '/api/mail/check') {
+    await checkMail();
+    return send(res, 200, mailState());
+  }
+
+  // "This email isn't about that job": remembered, so it stays detached on later checks.
+  if (method === 'POST' && pathname === '/api/mail/hide') {
+    const body = await readBody(req);
+    const pair = `${str(body.id, 500)}|${str(body.jobId, 500)}`;
+    db.mail ||= {};
+    db.mail.hidden = [...new Set([...(db.mail.hidden || []), pair])].slice(-2000);
+    db.mail.messages = (db.mail.messages || [])
+      .map((m) => (m.id === body.id ? { ...m, jobIds: m.jobIds.filter((id) => id !== body.jobId) } : m))
+      .filter((m) => m.jobIds.length);
+    saveDb(db);
+    return send(res, 200, mailState());
+  }
+
   if (method === 'GET' && pathname === '/api/status') {
     return send(res, 200, { ...scrape, lastScrape: db.lastScrape, lastSummary: db.lastSummary });
   }
@@ -347,6 +450,7 @@ async function handle(req, res) {
     if (method === 'GET') return send(res, 200, job);
     if (method === 'PATCH') {
       applyUpdate(job, await readBody(req));
+      if (lastInbox.length) rematchMail(); // a newly applied job may already have replies
       saveDb(db);
       return send(res, 200, summary(job));
     }
@@ -423,4 +527,6 @@ server.listen(config.port, '127.0.0.1', () => {
   openBrowser();
   const ageHours = db.lastScrape ? (Date.now() - Date.parse(db.lastScrape)) / 3.6e6 : Infinity;
   if (ageHours > (config.autoRefreshHours ?? 6)) startScrape();
+  checkMail();
+  setInterval(checkMail, (config.mailCheckMinutes ?? 10) * 60_000);
 });

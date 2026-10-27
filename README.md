@@ -62,6 +62,22 @@ After changing your profile, drag the button to the bookmarks bar again.
 * **Applied / Interviewing / Offer / Rejected** tabs are your tracker. **Export CSV** downloads it.
 * The header counts how many you applied to today and this week.
 
+### 📧 Mail: replies from companies
+
+Click **📧 Mail** and connect Gmail with an *app password* (create one at
+[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords); it needs 2-Step
+Verification). Job Hunter then checks your inbox every 10 minutes (`mailCheckMinutes` in `config.js`)
+and shows emails from companies you've applied to on the matching job: a **📧 1 unread** badge on the
+card, the emails in its details, and an unread count on the Mail button. Each email opens in Gmail.
+
+* It only reads: the inbox is opened read-only and nothing is marked as read, sent, moved or deleted.
+* An email matches a job when it comes from the company's own domain, or when it's clearly about an
+  application ("application", "ansökan", "interview"…) and names the company in the sender or subject,
+  and arrived after the day before you applied. Newsletters from the company don't count.
+* Wrong match? **Not this job** removes it for good.
+* The app password is stored only in `data/jobs.json` on this computer. **Disconnect** deletes it;
+  also withdraw it on Google's App passwords page.
+
 ## Scores and tags
 
 Scores run from 0 to 100, where **100 = your dream job** (`profile.perfectJob` in `config.js`).

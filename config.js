@@ -13,6 +13,8 @@ export default {
 
   // When the app starts, refresh automatically if the last scrape is older than this.
   autoRefreshHours: 6,
+  // How often to check your Gmail for replies while the app is open (set up under "Mail").
+  mailCheckMinutes: 10,
 
   // ── Companies to follow ───────────────────────────────────────────────────
   // ats: greenhouse | lever | ashby | smartrecruiters | workable | teamtailor

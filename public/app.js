@@ -30,8 +30,10 @@ const state = {
   snippets: [],
   details: new Map(), // id → full job (with description), fetched on expand
   expanded: new Set(),
-  pending: new Set(),
-  writing: new Set(), // jobs Claude is writing a letter for right now // jobs whose application page was opened but not yet confirmed
+  pending: new Set(), // jobs whose application page was opened but not yet confirmed
+  writing: new Set(), // jobs Claude is writing a letter for right now
+  mail: null, // /api/mail: connection status + emails matched to your applications
+  mailByJob: new Map(), // job id → its emails
   selected: null,
   limit: PAGE,
   lastUndo: null,
@@ -219,6 +221,85 @@ function renderStats() {
   $('#stats').innerHTML = `Applied today <b>${today}</b> · this week <b>${week}</b> · total <b>${applied.length}</b>`;
 }
 
+// ── Mail ──────────────────────────────────────────────────────────────────
+const mailSignature = () => JSON.stringify([...state.mailByJob].map(([id, ms]) => [id, ms.map((m) => m.id + m.unread)]));
+
+function setMail(mail) {
+  const before = mailSignature();
+  state.mail = mail;
+  state.mailByJob = new Map();
+  for (const msg of mail.messages) {
+    for (const id of msg.jobIds) state.mailByJob.set(id, [...(state.mailByJob.get(id) || []), msg]);
+  }
+  $('#mailCount').hidden = !mail.unread;
+  $('#mailCount').textContent = mail.unread;
+  if (!$('#mailDrawer').hidden) renderMailDrawer();
+  if (before !== mailSignature() && state.jobs.length) renderList(); // new replies: update the badges
+}
+
+async function loadMail() {
+  try {
+    setMail(await api('/api/mail'));
+  } catch {}
+}
+
+function mailBadge(j) {
+  const mail = state.mailByJob.get(j.id);
+  if (!mail) return '';
+  const unread = mail.filter((m) => m.unread).length;
+  const text = unread ? `📧 ${unread} unread` : `📧 ${mail.length} email${mail.length === 1 ? '' : 's'}`;
+  return `<button class="mail-badge ${unread ? 'unread' : ''}" data-act="mail" type="button" title="Emails from ${esc(j.company)} since you applied">${text}</button>`;
+}
+
+/** One email. `jobs` = the jobs to show it under, each with a "not this job" button. */
+function mailItem(msg, jobs) {
+  const about = jobs
+    .map(
+      (j) => `<div class="row about"><span>↳ ${esc(j.title)} · ${esc(j.company)}</span>
+        <button class="btn ghost notthis" data-act="mail-hide" data-msg="${esc(msg.id)}" data-job="${esc(j.id)}" type="button" title="This email isn't about this job">Not this job</button></div>`,
+    )
+    .join('');
+  return `<li class="mail-item ${msg.unread ? 'unread' : ''}">
+    <a class="subject" href="${esc(msg.link)}" target="_blank" rel="noopener" title="Open in Gmail">${esc(msg.subject)}</a>
+    <span class="from">${esc(msg.fromName || msg.from)} &lt;${esc(msg.from)}&gt; · ${esc(ago(msg.date))}</span>
+    ${about}
+  </li>`;
+}
+
+function renderMailDrawer() {
+  const m = state.mail;
+  if (!m) return;
+  const form = $('#mailForm');
+  if (document.activeElement?.form !== form) form.user.value = m.user || '';
+  form.password.placeholder = m.connected ? 'Saved (paste a new one to replace it)' : 'xxxx xxxx xxxx xxxx';
+  $('#mailDisconnect').hidden = !m.connected;
+  $('#mailCheck').hidden = !m.connected;
+  $('#mailCheck').disabled = !!m.checking;
+  const status = $('#mailStatus');
+  status.classList.toggle('error', !!m.error);
+  const count = `${m.messages.length} email${m.messages.length === 1 ? '' : 's'} from companies you applied to`;
+  const checked = m.lastCheck ? ` · checked ${new Date(m.lastCheck).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+  status.textContent = m.checking
+    ? 'Checking Gmail…'
+    : m.error || (m.connected ? `Connected as ${m.user}${checked} · ${count}` : 'Not connected yet.');
+  $('#mailList').innerHTML = m.messages.map((msg) => mailItem(msg, msg.jobs)).join('');
+}
+
+async function openMail() {
+  $('#mailDrawer').hidden = false;
+  await loadMail();
+  renderMailDrawer();
+}
+
+async function hideMail(msgId, jobId) {
+  try {
+    setMail(await api('/api/mail/hide', { method: 'POST', body: { id: msgId, jobId } }));
+    toast('Got it: that email is no longer shown on that job.');
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
 function renderLastScrape(iso) {
   $('#refreshBtn').title = iso ? `Last refreshed ${new Date(iso).toLocaleString()}` : 'Never refreshed';
 }
@@ -321,6 +402,7 @@ function details(j) {
     ${facts ? `<div class="matched">${facts}</div>` : ''}
     ${matched ? `<div class="matched">Why it matched — ${matched}</div>` : ''}
     ${breakdown ? `<div class="matched">Score — ${breakdown}</div>` : ''}
+    ${state.mailByJob.has(j.id) ? `<div class="matched">Emails from ${esc(j.company)} since you applied</div><ul class="mail-list">${state.mailByJob.get(j.id).map((m) => mailItem(m, [j])).join('')}</ul>` : ''}
     <pre class="desc">${esc(desc)}</pre>
     ${j.aiLetter ? `<label>AI letter for this job (edit freely: Apply and ⚡ Fill use this version)<textarea data-act="ailetter" rows="12">${esc(j.aiLetter)}</textarea></label>` : ''}
     <label>Notes (contacts, salary, follow-up dates…)<textarea data-act="notes" rows="3">${esc(j.notes || '')}</textarea></label>
@@ -352,7 +434,7 @@ function card(j) {
     j.salary && esc(j.salary),
     `via ${esc(j.source)}`,
   ].filter(Boolean);
-  const tracked = TRACKED.includes(j.status) && j.appliedAt ? `<div class="tracked">Applied ${ago(j.appliedAt)}</div>` : '';
+  const tracked = TRACKED.includes(j.status) && j.appliedAt ? `<div class="tracked">Applied ${ago(j.appliedAt)}${mailBadge(j)}</div>` : '';
   return `<li class="${cls}" data-id="${esc(j.id)}">
     <div class="score r-${rarity.key}" title="${rarity.name}: ${j.score}/100 (100 = your dream job)">${j.score}</div>
     <div>
@@ -627,6 +709,10 @@ function runAction(act, id, el) {
       return toggleExpand(id);
     case 'status':
       return setStatus(id, el.value);
+    case 'mail':
+      return state.expanded.has(id) ? select(id, { scroll: false }) : toggleExpand(id);
+    case 'mail-hide':
+      return hideMail(el.dataset.msg, el.dataset.job);
   }
 }
 
@@ -941,6 +1027,45 @@ $('#bookmarklet').addEventListener('click', (e) => {
   toast('Drag this button to your bookmarks bar, then click it on a job application form.');
 });
 
+// ── Mail drawer ───────────────────────────────────────────────────────────
+$('#mailBtn').addEventListener('click', openMail);
+$('#closeMail').addEventListener('click', () => ($('#mailDrawer').hidden = true));
+$('#mailForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const body = { user: form.user.value, password: form.password.value };
+  state.mail = { ...(state.mail || { messages: [] }), checking: true, error: null };
+  renderMailDrawer();
+  try {
+    setMail(await api('/api/mail', { method: 'PUT', body }));
+    form.password.value = '';
+    const n = state.mail.messages.length;
+    toast(state.mail.error || `Gmail connected: ${n} email${n === 1 ? '' : 's'} from companies you applied to.`);
+  } catch (err) {
+    toast(err.message);
+    loadMail();
+  }
+});
+$('#mailDisconnect').addEventListener('click', async () => {
+  if (!confirm("Disconnect Gmail? The saved app password is deleted from Job Hunter (also withdraw it on Google's App passwords page).")) return;
+  setMail(await api('/api/mail', { method: 'PUT', body: { disconnect: true } }));
+  toast('Gmail disconnected.');
+});
+$('#mailCheck').addEventListener('click', async () => {
+  state.mail.checking = true;
+  renderMailDrawer();
+  try {
+    setMail(await api('/api/mail/check', { method: 'POST' }));
+  } catch (err) {
+    toast(err.message);
+    loadMail();
+  }
+});
+$('#mailList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-act="mail-hide"]');
+  if (btn) hideMail(btn.dataset.msg, btn.dataset.job);
+});
+
 // ── Add job dialog ────────────────────────────────────────────────────────
 const dialog = $('#addDialog');
 $('#addBtn').addEventListener('click', () => {
@@ -974,3 +1099,5 @@ api('/api/snippets').then((s) => (state.snippets = s));
 api('/api/profile').then((r) => (state.profile = r.profile));
 const status = await api('/api/status');
 if (status.running) pollStatus();
+loadMail();
+setInterval(loadMail, 60_000); // the server checks Gmail every 10 minutes; this picks up the result
